@@ -17,7 +17,6 @@
 **Node Packages Used**
 
 - Async
-- Basic-Auth-Connect - Basic HTTP Auth
 - Bcrypt - Encrypt passwords
 - Body-Parser - Parse body elements in POST requests
 - Express - Node Framework
