@@ -3,11 +3,14 @@
 module.exports = function(app) {
 
 	// var User = require('.././models/user')
-	// User.create(username, pw, email, function(err) {
 
-	// })
-	// Create account function
-
+	/*
+	Res Data:
+		code 	= int
+		message = string
+		token 	= string
+		ttl		= number
+	*/
 	function createAccount(req, res) {
 		var username	= req.body.username;
 		var password	= req.body.password;
@@ -39,6 +42,11 @@ module.exports = function(app) {
 		*/
 	}
 
+	/*
+	Res Data:
+		code 	= int
+		message = string
+	*/
 	function deleteAccount(req, res) {
 		// What is a token?????
 		var token = req.body.token;
@@ -57,10 +65,15 @@ module.exports = function(app) {
 		*/
 	}
 
+	/*
+	Res Data:
+		code 	= int
+		message = string
+	*/
 	function changePassword(req, res) {
-		var token = req.body.token;
-		var oldPassword = req.body.oldPassword;
-		var newPassword = req.body.newPassword;
+		var token 			= req.body.token;
+		var oldPassword 	= req.body.oldPassword;
+		var newPassword 	= req.body.newPassword;
 		var confirmPassword = req.body.confirmPassword;
 
 		if (newPassword != confirmPassword) {
@@ -85,9 +98,16 @@ module.exports = function(app) {
 		}
 	}
 
+	/*
+	Res Data:
+		code 	= int
+		message = string
+		token 	= string
+		ttl		= number
+	*/
 	function authenticate(req, res) {
-		var usenameEmail = req.body.usernameemail;
-		var password = req.body.password;
+		var usenameEmail 	= req.body.usernameemail;
+		var password 		= req.body.password;
 
 		// Check if user already logged in
 
@@ -120,12 +140,24 @@ module.exports = function(app) {
 		*/
 	}
 
+	/*
+	Res Data:
+		code 	= int
+		message = string
+		token 	= string
+		ttl		= number
+	*/
 	function reauthenticate(req, res) {
 		var token = req.body.token;
 
 		// ?????
 	}
 
+	/*
+	Res Data:
+		code 	= int
+		message = string
+	*/
 	function logout(req, res) {
 
 		// Check if user logged in already

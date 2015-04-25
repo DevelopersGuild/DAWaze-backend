@@ -1,7 +1,29 @@
 'use strict';
 
 module.exports = function(app) {
+
+	/*
+	Res Data:
+		code 					= int,
+		message 				= string, 
+		tags = 	[{	
+				tag 			= id,
+				type 			= id,
+				coordinateX 	= int,
+				coordinateY 	= int,
+				expirationtime 	= int
+				}]
+	*/
+	function getTag(req, res) {
+
+	}
 	
+	/*
+	Res Data:
+		code 	= int,
+		message = string, 
+		tag 	= id
+	*/
 	function newTag(req, res) {
 		var token 		= req.body.token;
 		var title 		= req.body.title;
@@ -32,6 +54,12 @@ module.exports = function(app) {
 		*/
 	}
 
+	/*
+	Res Data:
+		code 	= int,
+		message = string, 
+		tag 	= id
+	*/
 	function deleteTag(req, res) {
 		var token = req.body.token;
 
@@ -51,6 +79,7 @@ module.exports = function(app) {
 		*/
 	}
 
+	app.get('/v1/map', getTag);
 	app.post('/v1/map/tag', newTag);
-	app.delete('v1/map/tag', deleteTag)
+	app.delete('/v1/map/tag', deleteTag);
 }
