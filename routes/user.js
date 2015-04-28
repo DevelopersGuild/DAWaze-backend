@@ -3,11 +3,11 @@
 module.exports = function(app) {
 
 	var validator = require('validator');
-	var User = require('/.././models/user');
+	var User = require('/../models/user');
 
 	// Returns true if contains only alphanumeric characters,
 	// underscores and/or dashes.
-	var isUsername = function isUsername(username) {
+	function isUsername(username) {
 		var re = /^[a-zA-Z0-9-_]+$/;
 		return re.test(username);
 	}
@@ -19,7 +19,7 @@ module.exports = function(app) {
 		token 	= string
 		ttl		= number
 	*/
-	var createAccount = function createAccount(req, res) {
+	function createAccount(req, res) {
 		var username	= validator.toString(validator.escape(req.body.username));
 		var password	= validator.toString(validator.escape(req.body.password));
 		var email		= validator.toString(validator.escape(req.body.email));
@@ -30,6 +30,7 @@ module.exports = function(app) {
 		// USERNAME CHECKS //
 		/////////////////////
 
+		// Checks empty username field
 		if (!username) {
 			res.send({
 				code 	: 400,
@@ -38,18 +39,7 @@ module.exports = function(app) {
 			return;
 		}
 
-		// Check username already exists
-		/*
-		if (req.session.user) {
-			error = {
-				code 	: 400,
-				message : '..........'
-			};
-			res.send(error);
-			return;
-		}
-		*/
-
+		// Validate username (alphanumeric characters, underscore and/or dashes)
 		if (!isUsername(username)) {
 			res.send({
 				code 	: 400,
@@ -59,12 +49,12 @@ module.exports = function(app) {
 			return;
 		}
 
-		// TODO: define min and max
+		// TODO: Decide min and max
 		// Check username length
-		if (!validator.isLength(username, min, max)) {
+		if (!validator.isLength(username, 4, 12)) {
 			res.send({
 				code	: 400,
-				message : 'Username must be between min and max characters.'
+				message : 'Username must be between 4 and 12 characters.'
 			});
 			return;
 		}
@@ -73,8 +63,7 @@ module.exports = function(app) {
 		// PASSWORD CHECKS //
 		/////////////////////
 
-		// TODO: Confirm Password?
-
+		// Checks empty password field
 		if (!password) {
 			res.send({
 				code 	: 400,
@@ -87,10 +76,10 @@ module.exports = function(app) {
 		
 		// TODO: define min and max
 		// Check password length
-		if (!validator.isLength(password, min, max)) {
+		if (!validator.isLength(password, 4, 512)) {
 			res.send({
 				code	: 400,
-				message : 'Password must be between min and max characters.'
+				message : 'Password must be between 5 and 512 characters.'
 			});
 			return;
 		}
@@ -99,18 +88,7 @@ module.exports = function(app) {
 		// EMAIL CHECKS //
 		//////////////////
 
-		// TODO: Is this check neccessary?
-		// Check email field
-		if (!email) {
-			res.send({
-				code 	: 400,
-				message : 'Email field is required.'
-			});
-			return;
-		}
-
-		// Check email already exists
-
+		// Validate email
 		if (!validator.isEmail(email)) {
 			res.send({
 				code	: 400,
@@ -121,40 +99,25 @@ module.exports = function(app) {
 
 		// TODO: define min and max
 		// Check email length
-		if (!validator.isLength(email, min, max)) {
+		if (!validator.isLength(email, 4, 512)) {
 			res.send({
 				code	: 400,
-				message : 'Email must be between min and max characters long.'
+				message : 'Email must be between 4 and 512 characters long.'
 			});
 			return;
 		}
-
+		
+		// TODO: Generate tokens
 		User.create(username, password, email, function(err, user) {
 			if (err) {
 				res.send(err);
 				return;
 			}
-			User.setOnlineStatus(user.username, true, function(err) {
-				if (err) {
-					res.send(err);
-					return;
-				}
-				req.session.user = user;
-
-				// TODO: Decide session expiration time and change var time
-				// Cookie expiration time
-				var time;
-				
-				req.session.cookie.expires = new Date(Date.now() + time);
-				
-				res.send({
-					code	: 200,
-					message	: 'Account successfully created.'
-					// token?
-					// ttl?
-				});
-
-				// Redirect?
+			res.send({
+				code	: 200,
+				message	: 'Account successfully created.'
+				// token?
+				// ttl?
 			});
 		});
 	}
@@ -164,8 +127,8 @@ module.exports = function(app) {
 		code 	= int
 		message = string
 	*/
-	var deleteAccount = function deleteAccount(req, res) {
-		// var token = req.body.token;
+	function deleteAccount(req, res) {
+		var token = req.body.token;
 
 		User.delete(function(err) {
 			if (err) {
@@ -184,29 +147,10 @@ module.exports = function(app) {
 		code 	= int
 		message = string
 	*/
-	var changePassword = function changePassword(req, res) {
-		// var token 			= req.body.token;
+	function changePassword(req, res) {
+		var token 			= req.body.token;
 		var oldPassword 	= validator.toString(validator.escape(req.body.oldPassword));
 		var newPassword 	= validator.toString(validator.escape(req.body.newPassword));
-		var confirmPassword = validator.toString(validator.escape(req.body.confirmPassword));
-		var user 			= req.session.user;
-
-		if (newPassword != confirmPassword) {
-			res.send({
-				code	: 400,
-				message	: 'Passwords must match.'
-			});
-			return;
-		}
-		
-		// Cryptography??
-		if (oldPassword != user.password) {
-			res.send({
-				code	: 400,
-				message : 'Incorrect password.'
-			});
-			return;
-		}
 
 		User.changePassword(function(err) {
 			if (err) {
@@ -217,7 +161,8 @@ module.exports = function(app) {
 				code	: 200,
 				message	: 'Password has been changed.'
 			});
-		};
+		});
+		
 	}
 
 	/*
@@ -227,29 +172,26 @@ module.exports = function(app) {
 		token 	= string
 		ttl		= number
 	*/
-	var authenticate = function authenticate(req, res) {
-		var usenameEmail 	= validator.toString(validator.escape(req.body.usernameemail));
+	function authenticate(req, res) {
+		var usernameEmail 	= validator.toString(validator.escape(req.body.usernameemail));
 		var password 		= validator.toString(validator.escape(req.body.password));
-
-		// TODO: Isn't a redirect more appropriate?
-		// Check if user already logged in
-		if (req.session.user) {
-			res.send({
-				code	: 400
-				message	: 'User already online.'
-			});
-			return;
-		}
 
 		if (!usernameEmail) {
 			res.send({
-				code	: 400
+				code	: 400,
 				message	: 'Username/Email field is required.'
 			});
 		}
 
+		// TODO: Decide on min and max
 		// Check usernameEmail length
-		// Check id exists (either username or email) ??
+		if (!validator.isLength(usernameEmail, 4, 512)) {
+			res.send({
+				code	: 400,
+				message : 'Username/Email must be between 5 and 512 characters.'
+			});
+			return;
+		}
 
 		if (!password) {
 			res.send({
@@ -259,36 +201,27 @@ module.exports = function(app) {
 			return;
 		}
 
+		// TODO: Decide on min and max
 		// Check password length
-		// Validate password ??
+		if (!validator.isLength(password, 4, 512)) {
+			res.send({
+				code	: 400,
+				message : 'Password must be between 5 and 512 characters.'
+			});
+			return;
+		}
 
 		User.login(usernameEmail, password, function(err, user) {
 			if (err) {
 				res.send(err);
 				return;
 			}
-			User.setOnlineStatus(user.username, true, function(err) {
-				if (err) {
-					res.send(err);
-					return;
-				}
-				req.session.user = user;
-
-				// TODO: Decide session expiration time and change var time
-				// Cookie expiration time
-				var time;
-				
-				req.session.cookie.expires = new Date(Date.now() + time);
-				
-				res.send({
-					code	: 200,
-					message	: 'Login successful.'
-					// token?
-					// ttl?
-				});
-
-				// Redirect??
-			})
+			res.send({
+				code	: 200,
+				message	: 'Login successful.'
+				// token?
+				// ttl?
+			});
 		});
 	}
 
@@ -299,10 +232,10 @@ module.exports = function(app) {
 		token 	= string
 		ttl		= number
 	*/
-	var reauthenticate = function reauthenticate(req, res) {
+	function reauthenticate(req, res) {
 		var token = req.body.token;
 
-		// ?????
+		// TDOD: Method in user model to renew token if it's already in the database.
 	}
 
 	/*
@@ -310,47 +243,16 @@ module.exports = function(app) {
 		code 	= int
 		message = string
 	*/
-	var logout = function logout(req, res) {
+	function logout(req, res) {
+		var token = req.body.token;
 
-		if (!req.session.user) {
-			res.send({
-				code	: 400,
-				message	: 'User not logged in.'
-			});
-			return;
-		}
-
-		User.setOnlineStatus(user.username, false, function(err) {
-			if (err) {
-				res.send(err);
-				return;
-			}
-			req.session.destroy(function(err) {
-				if (err) {
-					res.send(err);
-					return;
-				}
-				res.send({
-					code	: 200,
-					message	: 'Logout successful.'
-				});
-
-				// Redirect
-			});		
-		});
+		// TODO: Method in user model to remove token if it's in the database.
 	}
 
 	app.post('/v1/user', createAccount);
 	app.delete('/v1/user', deleteAccount);
-
-	// '/v1/user/:userid/password'?
 	app.put('/v1/user/password', changePassword);
-
 	app.post('/v1/user/authenticate', authenticate);
-
 	app.post('/v1/user/reauthenticate', reauthenticate);
-
 	app.post('/v1/user/logout', logout);
-
-	
 }

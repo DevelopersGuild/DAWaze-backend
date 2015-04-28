@@ -1,63 +1,97 @@
 'use strict';
 
 module.exports = function(app) {
+	var validator = require('validator');
+	var Tag = require('/../models/tags')
 
 	/*
 	Res Data:
-		code 					= int,
-		message 				= string, 
-		tags = 	[{	
-				tag 			= id,
-				type 			= id,
-				coordinateX 	= int,
-				coordinateY 	= int,
-				expirationtime 	= int
-				}]
-	*/
-	function getTag(req, res) {
-
-	}
-	
-	/*
-	Res Data:
-		code 	= int,
-		message = string, 
-		tag 	= id
+		code 	= int
+		message = string
+		tags 	= id
 	*/
 	function newTag(req, res) {
-		var token 		= req.body.token;
-		var title 		= req.body.title;
-		var desc 		= req.body.narrative;
-		var question	= req.body.question;
-		// var tagID?
+		var token 	= validator.toString(validator.escape(req.body.token));
+		var title 	= validator.toString(validator.escape(req.body.title));
+		var lat 	= validator.toString(validator.escape(req.body.lat));
+		var lon 	= validator.toString(validator.escape(req.body.lon));
+		var tag 	= req.body.tag;
+		var user 	= req.body.user;
+		var ttl 	= req.body.ttl;
 
-		// Check token
+		//////////////////
+		// TITLE CHECKS //
+		//////////////////
 
-		// Check title length
-		// Check is valid title
+		// Checks empty title field
+		if (!title) {
+			res.send({
+				code 	: 400,
+				message : "Title field is required."
+			});
+			return;
+		}
 
-		// Check description length
+		// TODO: Decide on title length
+		// Checks title length
+		if (!validator.isLength(title, 5, 512)) {
+			res.send({
+				code	: 400,
+				message : "Title must be between 5 and 512 characters."
+			})
+		}
 
-		// Check question length
+		// Check for vulgarness??? (Profanity Util)
 
-		/*
-		Tag.create(title, desc, question, function(err) {
+		///////////////////////
+		// COORDINATE CHECKS //
+		///////////////////////
+
+		// Checks empty latitude field
+		if (!lat) {
+			res.send({
+				code 	: 400,
+				message : "Latitude field is required."
+			});
+			return;
+		}
+
+		// Valid latitude checks
+
+		// Checks empty longitude field
+		if (!lon) {
+			res.send({
+				code 	: 400,
+				message : "Longitude field is required."
+			});
+			return;
+		}
+
+		// Valid logitude checks
+
+		///////////////////////////////////////
+
+		// Check user/ownwer id?
+
+		// Check if valid ttl
+
+		Tag.create(token, title, lat, lon, tag, user, ttl, function (err, tagID) {
 			if (err) {
-
-				// TODO: Handle this error
+				res.send(err);
 				return;
 			}
-			
-			// Success!
-			// Reload map???
+			res.send({
+				code 	: 200,
+				message	: "Tag successfully created"
+				tag 	: tagID			// Possible error here
+			});
 		});
-		*/
 	}
 
 	/*
 	Res Data:
-		code 	= int,
-		message = string, 
+		code 	= int
+		message = string
 		tag 	= id
 	*/
 	function deleteTag(req, res) {
@@ -65,20 +99,19 @@ module.exports = function(app) {
 
 		// Any checks??
 
-		/*
 		Tag.delete(function(err) {
 			if (err) {
-	
-				// TODO: Handle this error
+				res.send(err);
 				return;
 			}
-
-			// Success!
-			// Reload map???
+			res.send({
+				code 	: 200,
+				message	: "Tag successfully deleted"
+			});
 		});
-		*/
 	}
 
+	// What is the structure of this method?
 	app.get('/v1/map', getTag);
 	app.post('/v1/map/tag', newTag);
 	app.delete('/v1/map/tag', deleteTag);
