@@ -30,3 +30,10 @@ var server = app.listen(SERVER_PORT, SERVER_ADDRESS, function () {
   console.log('Daze Backend API listening at http://%s:%s in %s mode.',
     host, port, app.get('env'));
 });
+
+// TEMPORARY
+var tag = require('./models/tags');
+
+tag.create('test', 12, 20, '#lol', 'Chris', 2000, function(err) {
+  console.log(err);
+});
