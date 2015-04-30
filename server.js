@@ -1,8 +1,8 @@
 'use strict';
 
-var bodyParser    = require('body-parser');
-var express       = require('express');
-var path          = require('path');
+var bodyParser = require('body-parser');
+var express    = require('express');
+var path       = require('path');
 
 // Use middleware
 var app = express();
