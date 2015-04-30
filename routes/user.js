@@ -1,9 +1,8 @@
 'use strict';
 
 module.exports = function(app) {
-
-	var validator = require('validator');
-	var User = require('/../models/user');
+	var validator 	= require('validator');
+	var User 		= require('/../models/user');
 
 	// Returns true if contains only alphanumeric characters,
 	// underscores and/or dashes.
@@ -12,13 +11,6 @@ module.exports = function(app) {
 		return re.test(username);
 	}
 
-	/*
-	Res Data:
-		code 	= int
-		message = string
-		token 	= string
-		ttl		= number
-	*/
 	function createAccount(req, res) {
 		var username	= validator.toString(validator.escape(req.body.username));
 		var password	= validator.toString(validator.escape(req.body.password));
@@ -116,21 +108,16 @@ module.exports = function(app) {
 			res.send({
 				code	: 200,
 				message	: 'Account successfully created.'
-				// token?
-				// ttl?
+				token 	: user.token
+				ttl		: user.token.ttl
 			});
 		});
 	}
 
-	/*
-	Res Data:
-		code 	= int
-		message = string
-	*/
 	function deleteAccount(req, res) {
 		var token = req.body.token;
 
-		User.delete(function(err) {
+		User.delete(token, function(err) {
 			if (err) {
 				res.send(err);
 				return;
@@ -142,17 +129,12 @@ module.exports = function(app) {
 		});
 	}
 
-	/*
-	Res Data:
-		code 	= int
-		message = string
-	*/
 	function changePassword(req, res) {
 		var token 			= req.body.token;
 		var oldPassword 	= validator.toString(validator.escape(req.body.oldPassword));
 		var newPassword 	= validator.toString(validator.escape(req.body.newPassword));
 
-		User.changePassword(function(err) {
+		User.changePassword(token, oldPassword, newPassword, function(err) {
 			if (err) {
 				res.send(err);
 				return;
@@ -165,13 +147,6 @@ module.exports = function(app) {
 		
 	}
 
-	/*
-	Res Data:
-		code 	= int
-		message = string
-		token 	= string
-		ttl		= number
-	*/
 	function authenticate(req, res) {
 		var usernameEmail 	= validator.toString(validator.escape(req.body.usernameemail));
 		var password 		= validator.toString(validator.escape(req.body.password));
@@ -225,24 +200,12 @@ module.exports = function(app) {
 		});
 	}
 
-	/*
-	Res Data:
-		code 	= int
-		message = string
-		token 	= string
-		ttl		= number
-	*/
 	function reauthenticate(req, res) {
 		var token = req.body.token;
 
 		// TDOD: Method in user model to renew token if it's already in the database.
 	}
 
-	/*
-	Res Data:
-		code 	= int
-		message = string
-	*/
 	function logout(req, res) {
 		var token = req.body.token;
 

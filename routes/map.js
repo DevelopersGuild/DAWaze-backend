@@ -1,15 +1,9 @@
 'use strict';
 
 module.exports = function(app) {
-	var validator = require('validator');
-	var Tag = require('/../models/tags')
+	var validator 	= require('validator');
+	var Tag 		= require('/../models/tags');
 
-	/*
-	Res Data:
-		code 	= int
-		message = string
-		tags 	= id
-	*/
 	function newTag(req, res) {
 		var token 	= validator.toString(validator.escape(req.body.token));
 		var title 	= validator.toString(validator.escape(req.body.title));
@@ -75,7 +69,7 @@ module.exports = function(app) {
 
 		// Check if valid ttl
 
-		Tag.create(token, title, lat, lon, tag, user, ttl, function (err, tagID) {
+		Tag.create(token, title, lat, lon, tag, user, ttl, function (err, tag) {
 			if (err) {
 				res.send(err);
 				return;
@@ -83,17 +77,11 @@ module.exports = function(app) {
 			res.send({
 				code 	: 200,
 				message	: "Tag successfully created"
-				tag 	: tagID			// Possible error here
+				tag 	: tag.tagID
 			});
 		});
 	}
 
-	/*
-	Res Data:
-		code 	= int
-		message = string
-		tag 	= id
-	*/
 	function deleteTag(req, res) {
 		var token = req.body.token;
 
@@ -113,6 +101,7 @@ module.exports = function(app) {
 
 	// What is the structure of this method?
 	app.get('/v1/map', getTag);
+
 	app.post('/v1/map/tag', newTag);
 	app.delete('/v1/map/tag', deleteTag);
 }
