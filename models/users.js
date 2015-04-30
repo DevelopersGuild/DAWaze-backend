@@ -5,14 +5,15 @@ var crypto 		= require('crypto');
 var validator 	= require('validator');
 
 var UserSchema = mongoose.Schema({
-    username	: {type: String, required: true},
-    email       : {type: String, required: true},
-    password    : {type: String, required: true},
-    token 		: {type: String, required: true}
+    username	: { type: String, required: true },
+    email       : { type: String, required: true },
+    password    : { type: String, required: true },
+    token 		: { type: String, required: true }
 });
 
 var UserMongoModel = Db.model('users', UserSchema);
 
+// Generates a random unique token ID
 function generateToken() {
 	var token;
 
@@ -20,16 +21,29 @@ function generateToken() {
 		// TODO: Handle this error
 		token = nonce.toString('base64');
 	});
-	return token
+	return token;
 }
 
+// Returns the default Time-To-Live of a token
+function getTtl() {
+	var ttl = 6000; // Decide default ttl
+	return ttl;
+}
+
+// Extends a token's Time-To-Live to the default ttl
+var extendTtl = function defaultTtl() {
+	return Date.now() + getTtl();
+}
+
+// Creates and return a new token with a unique ID and a Time-To-Live
 function createToken(ttl) {
 	var token = {
 		tokenID : generateToken(),
-		ttl		: Date.now() + ttl
+		ttl		: Date.now() + defaultTTl()
 	}
 	return token;
 }
+
 
 function createUser(username, password, email, callback) {
 	var newUser = {
@@ -39,15 +53,37 @@ function createUser(username, password, email, callback) {
 		token 		: null 	// How to set expiration time in the DB?
 	}
 
-	// TODO: Check if newUser.username / newUser.email / newUser.token is already in the db
+	// Check if newUser.username is already in the db
+	UserMongoModel.findOne({ username : username }, function(err, user) {
+		if (err) {
+			// TODO: Error code && message?
+			callback(err, null);
+			return;
+		}
+	});
+
+	// Check if newUser.email is already in the db
+	UserMongoModel.findOne({ email : email }, function(err, user) {
+		if (err) {
+			// TODO: Error code && message?
+			callback(err, null);
+			return;
+		}
+	});
 
 	UserMongoModel.create(newUser, function(err, user) {
-		callback(err, user);
+		callback(null, user);
 	});
 }
 
 function deleteUser(tokenID, callback) {
-	UserMongoModel.findOneAndRemove({ token.tokenID : tokenID }).exec(callback);	// TODO: Error code && message?
+	UserMongoModel.findOneAndRemove({ token.tokenID : tokenID }, function(err, user) {
+		if (err) {
+			// TODO: Error code && message?
+			callback(err, null);
+			return;
+		}
+	});
 }
 
 function changeUserPassword(tokenID, oldPassword, newPassword, callback) {
@@ -57,12 +93,11 @@ function changeUserPassword(tokenID, oldPassword, newPassword, callback) {
 			return;
 		}
 		user.password = newPassword;
-		callback(err);
+		callback(null);
 	});
 }
 
 function userAuthentication(usernameEmail, password, callback) {
-	var ttl = 6000;	// TODO: Determine ttl
 	var newToken = createToken(ttl);
 
 	// TODO: How to make this code cleaner?
@@ -74,7 +109,7 @@ function userAuthentication(usernameEmail, password, callback) {
 				return;
 			}
 			user.token = newToken;
-			callback(err, user.token);
+			callback(null, user.token);
 		});
 	} else {
 		UserMongoModel.findOne({ email : usernameEmail, password : password }, function(err, user) {
@@ -84,32 +119,36 @@ function userAuthentication(usernameEmail, password, callback) {
 				return;
 			}
 			user.token = newToken;
-			callback(err, user.token);
+			callback(null, user.token);
 		});
 	}
 }
 
 function userReauthentication(tokenID, callback) {
-	UserMongoModel.findOne({ token.tokenID : tokenID}, function(err, user) {
+	UserMongoModel.findOne({ token.tokenID : tokenID }, function(err, user) {
 		if (err) {
 			// TODO: Error code && message?
 			callback(err, null);
 			return;
 		}
-		// TODO: Extend token expiration time
-		callback(err, user.token);
+
+		// Extend token expiration time
+		user.token.tll = extendTtl());
+		callback(null, user.token);
 	});
 }
 
 function disconnectUser(tokenID, callback) {
-	UserMongoModel.findOne({ token.tokenID : tokenID}, function(err, user) {
+	UserMongoModel.findOne({ token.tokenID : tokenID }, function(err, user) {
 		if (err) {
 			// TODO: Error code && message?
 			callback(err);
 			return;
 		}
-		// TODO: Delete token
-		callback(err);
+
+		// Deletes current session token
+		user.token = null;
+		callback(null);
 }
 
 var UserModel = {
