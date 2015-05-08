@@ -16,6 +16,10 @@ var SERVER_PORT = process.env.SERVER_PORT || 9000;
 require('./routes/user')(app);
 require('./routes/map')(app);
 
+// Models
+var tag  = require('./models/tags');
+var user = require('./models/users');
+
 // Handle 404 Error
 app.use(function(req, res, next) {
   res.send('Not Found');
@@ -31,9 +35,3 @@ var server = app.listen(SERVER_PORT, SERVER_ADDRESS, function () {
     host, port, app.get('env'));
 });
 
-// TEMPORARY
-var tag = require('./models/tags');
-
-tag.create('test', 12, 20, '#lol', 'Chris', 2000, function(err) {
-  console.log(err);
-});
