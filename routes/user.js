@@ -7,8 +7,8 @@ module.exports = function(app) {
     // Returns true if contains only alphanumeric characters,
     // underscores and/or dashes.
     function isUsername(username) {
-        var re = /^[a-zA-Z0-9-_]+$/;
-        return re.test(username);
+        var regEx = /^[a-zA-Z0-9-_]+$/;
+        return regEx.test(username);
     }
 
     function createAccount(req, res) {
@@ -99,8 +99,7 @@ module.exports = function(app) {
             return;
         }
         
-        // TODO: Generate tokens
-        User.create(username, password, email, function(err, user) {
+        User.create(username, password, email, function(err, token) {
             if (err) {
                 res.send(err);
                 return;
@@ -108,16 +107,16 @@ module.exports = function(app) {
             res.send({
                 code    : 200,
                 message : 'Account successfully created.'
-                token   : user.token
-                ttl     : user.token.ttl
+                token   : token.tokenID
+                ttl     : token.ttl
             });
         });
     }
 
     function deleteAccount(req, res) {
-        var token = req.body.token;
+        var tokenID = req.body.token;
 
-        User.delete(token, function(err) {
+        User.delete(tokenID, function(err) {
             if (err) {
                 res.send(err);
                 return;
@@ -130,11 +129,11 @@ module.exports = function(app) {
     }
 
     function changePassword(req, res) {
-        var token       = req.body.token;
+        var tokenID       = req.body.token;
         var oldPassword = validator.toString(validator.escape(req.body.oldPassword));
         var newPassword = validator.toString(validator.escape(req.body.newPassword));
 
-        User.changePassword(token, oldPassword, newPassword, function(err) {
+        User.changePassword(tokenID, oldPassword, newPassword, function(err) {
             if (err) {
                 res.send(err);
                 return;
@@ -186,7 +185,7 @@ module.exports = function(app) {
             return;
         }
 
-        User.login(usernameEmail, password, function(err, user) {
+        User.login(usernameEmail, password, function(err, token) {
             if (err) {
                 res.send(err);
                 return;
@@ -194,22 +193,40 @@ module.exports = function(app) {
             res.send({
                 code    : 200,
                 message : 'Login successful.'
-                // token?
-                // ttl?
+                token   : token.tokenID
+                ttl     : token.ttl
             });
         });
     }
 
     function reauthenticate(req, res) {
-        var token = req.body.token;
-
-        // TDOD: Method in user model to renew token if it's already in the database.
+        var tokenID = req.body.token;
+        User.reauthenticate(tokenID, function(err, token) {
+            // TODO: Handle this error
+            if (err) {
+                res.send(err);
+                return;
+            }
+            res.send({
+                code    : 200,
+                message : 'Login successful.'
+                token   : token.tokenID
+                ttl     : token.ttl
+            })
+        });
     }
 
     function logout(req, res) {
-        var token = req.body.token;
+        var tokenID = req.body.token;
+        User.logout(tokenID, function(err) {
+            // TODO: Handle this error
 
-        // TODO: Method in user model to remove token if it's in the database.
+            res.send({
+                code    : 200,
+                message : 'Logout successful.'
+            })
+        })
+        
     }
 
     app.post('/v1/user', createAccount);
