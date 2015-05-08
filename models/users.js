@@ -39,7 +39,7 @@ var extendTtl = function defaultTtl() {
 function createToken(ttl) {
     var token = {
         tokenID : generateToken(),
-        ttl     : Date.now() + defaultTTl()
+        ttl     : Date.now() + defaultTtl()
     }
     return token;
 }
@@ -50,7 +50,7 @@ function createUser(username, password, email, callback) {
         username : username,
         email    : email,
         password : password,
-        token    : null  // How to set expiration time in the DB?
+        token    : createToken(getTtl())  // How to set expiration time in the DB?
     }
 
     // Check if newUser.username is already in the db
@@ -72,7 +72,7 @@ function createUser(username, password, email, callback) {
     });
 
     UserMongoModel.create(newUser, function(err, user) {
-        callback(null, user);
+        callback(null, user.token);
     });
 }
 
@@ -80,16 +80,19 @@ function deleteUser(tokenID, callback) {
     UserMongoModel.findOneAndRemove({ token.tokenID : tokenID }, function(err, user) {
         if (err) {
             // TODO: Error code && message?
-            callback(err, null);
+            callback(err);
             return;
         }
+        // TODO: Delete the user form the database
+        callback(err)
     });
 }
 
 function changeUserPassword(tokenID, oldPassword, newPassword, callback) {
     UserMongoModel.findOne({ token.tokenID : tokenID, password : oldPassword }, function(err, user) {
         if (err) {
-            callback(err);  // TODO: Error code && message?
+            // TODO: Error code && message?
+            callback(err);
             return;
         }
         user.password = newPassword;
