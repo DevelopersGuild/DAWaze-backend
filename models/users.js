@@ -96,7 +96,7 @@ function deleteUser(clientToken, callback) {
             }
 
             // Removes session from sessions collection
-            Session.delete(clientToken, function(err) {
+            Session.destroy(clientToken, function(err) {
                 if (err) {
                     // Error message handled by session model
                     callback(err);
