@@ -1,6 +1,7 @@
 'use strict';
 
-var Db = require('/../config/database');
+var Db = require('../config/database');
+var mongoose = require('mongoose');
 
 var TagSchema = mongoose.Schema({
     title          : {type: String, required: true},
@@ -35,8 +36,7 @@ function createTag(title, lat, lon, tag, owner, ttl, callback) {
 }
 
 var TagModel = {
-    create: createTag,
-    delete: deleteTag
+    create: createTag
 
     // TODO: getTag??
 };
