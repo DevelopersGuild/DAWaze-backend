@@ -2,7 +2,7 @@
 
 module.exports = function(app) {
     var validator = require('validator');
-    var Tag       = require('/../models/tags');
+    var Tag       = require('../models/tags');
 
     function newTag(req, res) {
         var token = validator.toString(validator.escape(req.body.token));
@@ -76,8 +76,8 @@ module.exports = function(app) {
             }
             res.send({
                 code    : 200,
-                message : "Tag successfully created"
-                tag     : tag.tagID
+                message : "Tag successfully created",
+                tag     : tag
             });
         });
     }
@@ -100,7 +100,7 @@ module.exports = function(app) {
     }
 
     // What is the structure of this method?
-    app.get('/v1/map', getTag);
+    // app.get('/v1/map', getTag);
 
     app.post('/v1/map/tag', newTag);
     app.delete('/v1/map/tag', deleteTag);
