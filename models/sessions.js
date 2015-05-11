@@ -79,18 +79,13 @@ function createSession(userId, callback) {
 // Takes a token string and deletes the session with that string from MongoDB
 function destroySession(clientToken, callback) {
     SessionMongoModel.findOneAndRemove({ token : clientToken }, 
-                                       function(err, session) {
+                                       function(err) {
         if (err) {
             // TODO: Error message?
             callback(err);
-        } else if (session) {
-            callback({
-                code    : 400,
-                message : 'Session destruction failed.'
-            });
-        } else {
-            callback(null);
+            return; 
         }
+        callback(null);
     });
 }
 

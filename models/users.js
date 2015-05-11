@@ -83,13 +83,8 @@ function deleteUser(clientToken, callback) {
                 if (err) {
                     // TODO: Error message?
                     callback(err);
-                } else if (user) {
-                    callback({
-                        code    : 400,
-                        message : 'User deletion failed.'
-                    });
                 } else {
-
+                    
                     // Removes session from sessions collection
                     Session.destroy(clientToken, function(err) {
                         if (err) {
