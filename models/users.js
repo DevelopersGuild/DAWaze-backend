@@ -5,14 +5,17 @@ var Session   = require('./sessions');
 var validator = require('validator');
 var mongoose  = require('mongoose');
 
+// Create the schema for a user
 var UserSchema = mongoose.Schema({
     username : { type: String, required: true },
     email    : { type: String, required: true },
     password : { type: String, required: true }
 });
 
+// Creates a collection named users in MongoDB
 var UserMongoModel = Db.model('users', UserSchema);
 
+// Takes username, password, email and saves a new user to MongoDB
 function createUser(username, password, email, callback) {
     var newUser = new UserMongoModel({
         username : username,
@@ -20,134 +23,171 @@ function createUser(username, password, email, callback) {
         password : password
     });
 
-    // Check if newUser.username or newUser.email is already in UserMongoModel
-    // TODO: Split into two or find a better way.
-    UserMongoModel.find({$or : [{ username : username }, { email : email }]}).limit(1).exec(function(err, user) {
-        // TODO: Handle this error
-
+    // Check if newUser.username is already in UserMongoModel
+    UserMongoModel.find({ username : username }).limit(1).exec(function(err, user) {
         if (user.length) {
+            callback({
+                code    : 400,
+                message : 'Username already exists'
+            }, null);
+            return;
+        }
+    });
+    
+    // Check if newUser.email is already in UserMongoModel
+    UserMongoModel.find({ email : email }).limit(1).exec(function(err, user) {
+        if (user.length) {
+            callback({
+                code    : 400,
+                message : 'Email already exists'
+            }, null);
+            return;
+        }
+    });
 
-            // TODO: Error message if user already exists.
+    // Saves user to UserMongoModel
+    newUser.save(function(err, user) {
+        if (err) {
+            // TODO: Error message?
             callback(err, null);
             return;
         }
+        if (user) {
 
-        // Saves user to UserMongoModel
-        newUser.save(function(err, user) {
-            // TODO: Handle this error
-
-            if (user) {
-                // Creates a new session with user._id
-                Session.create(user._id, function(err, session) {
-                    // TODO: Handle this error
-
-                    callback(null, session);
-                });
-            }
-        });
+            // Creates a new session with user._id
+            Session.create(user._id, function(err, session) {
+                if (err) {
+                    // Error message handled by session model
+                    callback(err);
+                    return;
+                }
+                callback(null, session);
+            });
+        } else
+            callback({
+                code    : 400,
+                message : 'User creation failed.'
+            }, null);
     });
 }
 
+// Takes a token string and deletes the associated user and session from MongoDB
 function deleteUser(clientToken, callback) {
     Session.findUser(clientToken, function(err, userId) {
-        // TODO: Handle this error
         if (err) {
+            // Error message handled by session model
             callback(err);
             return;
         }
-        if (userId) {
-
-            // Remove user from UserMongoModel
-            UserMongoModel.findByIdAndRemove(userId, function(err) {
-                // TODO: Handle this error
-
-                // Removes session from Sessions Db
-                Session.delete(clientToken, function(err) {
-                    // TODO: Handle this error
-
-                    callback(null)
+        
+        // Remove user from UserMongoModel
+        UserMongoModel.findByIdAndRemove(userId, function(err, user) {
+            if (err) {
+                // TODO: Error message?
+                callback(err);
+                return;
+            }
+            if (user) {
+                callback({
+                    code    : 400,
+                    message : 'User deletion failed.'
                 });
+                return;
+            }
+
+            // Removes session from sessions collection
+            Session.delete(clientToken, function(err) {
+                if (err) {
+                    // Error message handled by session model
+                    callback(err);
+                    return;
+                }
+                callback(null)
             });
-        }
+        });
+        
     });
 }
 
-
+// Takes a token string, password, new password and updates the user collection with new password
 function changeUserPassword(clientToken, oldPassword, newPassword, callback) {
     // TODO: Improve this code
     Session.findUser(clientToken, function(err, userId) {
-        // TODO: Handle this error
+        if (err) {
+            // Error message handled by session model
+            callback(err);
+            return;
+        }
+        UserMongoModel.findById(userId, function(err, user) {
+            if (err) {
+                // TODO: Error message?
+                callback(err);
+                return;
+            }
+            if (user) {
 
-        if (userId) {
-            UserMongoModel.findById(userId, function(err, user) {
-
-                if (!user) {
-                    // TODO: Handle this error
-                    callback({
-                        code    : 400,
-                        message : "User doesn't exist"
-                    }, null);
-                    return;
-                }
-                // Validate password
+                // Verify password
                 if (user.password != oldPassword) {
-                    // TODO: Handle this error
                     callback({
                         code    : 400,
                         message : 'Incorrect Password'
                     }, null);
                     return;
                 }
-                UserMongoModel.findByIdAndUpdate(userId, { password : newPassword }, function(err) {
-                    // TODO: Handle this error
-                    if (err) {
-                        callback(err);
-                        return;
-                    }
-                    callback(null);
+                UserMongoModel.findByIdAndUpdate(userId, { password : newPassword }, function(err, user) {
+                if (err) {
+                    // TODO: Error message?
+                    callback(err);
+                    return;
+                }
+                callback(null);
                 });
-            });
-        }
+            } else
+                callback({
+                    code    : 400,
+                    message : "User does not exist."
+                }, null);
+        });
     });
 }
 
+// Takes a username/email and password and creates a new session, returning the token string to callback
 function userAuthentication(usernameEmail, password, callback) {
     UserMongoModel.findOne({$or : [{ username : usernameEmail }, { email : usernameEmail }]}, function(err, user) {
         if (err) {
+            // TODO: Error message?
             callback(err, null);
             return;
         }
-
         if (user) {
-
-            // TODO: Handle this error
+            // Verify password
             if (user.password == password) {
                 Session.create(user._id, function(err, session) {
                     if (err) {
+                        // Error message handled by session model
                         callback(err, null);
                         return;
                     }
                     callback(null, session);
                 });
-            } else {
+            } else
                 callback({
-                code    : 400,
-                message : "Incorrect password."
-            }, null);
-            }
-        } else {
+                    code    : 400,
+                    message : "Incorrect password."
+                }, null);
+        } else
             callback({
                 code    : 400,
                 message : "Username/Email does not exists."
             }, null);
-        }
     });
 }
 
+// Takes a token string and verifies session exists
 function userReauthentication(clientToken, callback) {
     Session.refresh(clientToken, function(err) {
-        // TODO: Handle this error
         if (err) {
+            // Error message handled by session model
             callback(err, null);
             return;
         }
@@ -155,15 +195,16 @@ function userReauthentication(clientToken, callback) {
     });
 }
 
+// Takes a token string and removes session from MongoDB
 function disconnectUser(clientToken, callback) {
     Session.delete(clientToken, function(err) {
-        // TODO: Handle this error
         if (err) {
+            // Error message handled by session model
             callback(err);
             return;
         }
         callback(null);
-    })
+    });
 }
 
 var UserModel = {
