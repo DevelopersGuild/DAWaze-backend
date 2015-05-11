@@ -29,45 +29,45 @@ function createUser(username, password, email, callback) {
             callback({
                 code    : 400,
                 message : 'Username already exists'
-            }, null);
+            });
             return;
         }
-    });
-    
-    // Check if newUser.email is already in UserMongoModel
-    UserMongoModel.find({ email : email }).limit(1).exec(function(err, user) {
-        if (user.length) {
-            callback({
-                code    : 400,
-                message : 'Email already exists'
-            }, null);
-            return;
-        }
-    });
 
-    // Saves user to UserMongoModel
-    newUser.save(function(err, user) {
-        if (err) {
-            // TODO: Error message?
-            callback(err, null);
-            return;
-        }
-        if (user) {
+        // Check if newUser.email is already in UserMongoModel
+        UserMongoModel.find({ email : email }).limit(1).exec(function(err, user) {
+            if (user.length) {
+                callback({
+                    code    : 400,
+                    message : 'Email already exists'
+                });
+                return;
+            }
 
-            // Creates a new session with user._id
-            Session.create(user._id, function(err, session) {
+            // Saves user to UserMongoModel
+            newUser.save(function(err, user) {
                 if (err) {
-                    // Error message handled by session model
+                    // TODO: Error message?
                     callback(err);
                     return;
-                }
-                callback(null, session);
+                } else if (!user) {
+                    callback({
+                        code    : 400,
+                        message : 'User creation failed.'
+                    });
+                } else {
+
+                    // Creates a new session with user._id
+                    Session.create(user._id, function(err, session) {
+                        if (err) {
+                            // Error message handled by session model
+                            callback(err);
+                            return;
+                        }
+                        callback(null, session);
+                    });
+                } 
             });
-        } else
-            callback({
-                code    : 400,
-                message : 'User creation failed.'
-            }, null);
+        });
     });
 }
 
