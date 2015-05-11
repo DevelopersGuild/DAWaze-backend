@@ -111,7 +111,7 @@ function refreshSession(clientToken, callback) {
                         if (err) {
                             callback(err);
                         } else {
-                            callback(null, newSession.token);
+                            callback(null, newSession);
                         }
                     })
                 }

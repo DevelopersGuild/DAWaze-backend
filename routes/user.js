@@ -195,7 +195,7 @@ module.exports = function(app) {
                 code    : 200,
                 message : 'Login successful.',
                 // TODO: respond with token and ttl
-                // token   : session.token
+                token   : session.token
                 // ttl     : session.ttl
             });
         });
@@ -203,16 +203,16 @@ module.exports = function(app) {
 
     function reauthenticate(req, res) {
         var clientToken = req.body.token;
-        User.reauthenticate(clientToken, function(err, token) {
+        User.reauthenticate(clientToken, function(err, session) {
             if (err) {
                 res.send(err);
                 return;
             }
             res.send({
                 code    : 200,
-                message : 'Login successful.'
+                message : 'Login successful.',
                 // TODO: respond with token and ttl
-                // token   : token.ID
+                token   : session.token
                 // ttl     : token.ttl
             })
         });

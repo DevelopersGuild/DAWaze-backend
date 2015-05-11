@@ -84,7 +84,7 @@ function deleteUser(clientToken, callback) {
                     // TODO: Error message?
                     callback(err);
                 } else {
-                    
+
                     // Removes session from sessions collection
                     Session.destroy(clientToken, function(err) {
                         if (err) {
@@ -177,13 +177,13 @@ function userAuthentication(usernameEmail, password, callback) {
 
 // Takes a token string and verifies session exists
 function userReauthentication(clientToken, callback) {
-    Session.refresh(clientToken, function(err, token) {
+    Session.refresh(clientToken, function(err, session) {
         if (err) {
             // Error message handled by session model
             callback(err, null);
             return;
         }
-        callback(null, token);
+        callback(null, session);
     });
 }
 
