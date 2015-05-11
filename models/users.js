@@ -30,44 +30,43 @@ function createUser(username, password, email, callback) {
                 code    : 400,
                 message : 'Username already exists'
             });
-            return;
-        }
+        } else {
 
-        // Check if newUser.email is already in UserMongoModel
-        UserMongoModel.find({ email : email }).limit(1).exec(function(err, user) {
-            if (user.length) {
-                callback({
-                    code    : 400,
-                    message : 'Email already exists'
-                });
-                return;
-            }
-
-            // Saves user to UserMongoModel
-            newUser.save(function(err, user) {
-                if (err) {
-                    // TODO: Error message?
-                    callback(err);
-                    return;
-                } else if (!user) {
+            // Check if newUser.email is already in UserMongoModel
+            UserMongoModel.find({ email : email }).limit(1).exec(function(err, user) {
+                if (user.length) {
                     callback({
                         code    : 400,
-                        message : 'User creation failed.'
+                        message : 'Email already exists'
                     });
                 } else {
 
-                    // Creates a new session with user._id
-                    Session.create(user._id, function(err, session) {
+                    // Saves user to UserMongoModel
+                    newUser.save(function(err, user) {
                         if (err) {
-                            // Error message handled by session model
+                            // TODO: Error message?
                             callback(err);
-                            return;
-                        }
-                        callback(null, session);
+                        } else if (!user) {
+                            callback({
+                                code    : 400,
+                                message : 'User creation failed.'
+                            });
+                        } else {
+
+                            // Creates a new session with user._id
+                            Session.create(user._id, function(err, session) {
+                                if (err) {
+                                    // Error message handled by session model
+                                    callback(err);
+                                    return;
+                                }
+                                callback(null, session);
+                            });
+                        } 
                     });
-                } 
+                }
             });
-        });
+        }
     });
 }
 
@@ -77,35 +76,32 @@ function deleteUser(clientToken, callback) {
         if (err) {
             // Error message handled by session model
             callback(err);
-            return;
-        }
-        
-        // Remove user from UserMongoModel
-        UserMongoModel.findByIdAndRemove(userId, function(err, user) {
-            if (err) {
-                // TODO: Error message?
-                callback(err);
-                return;
-            }
-            if (user) {
-                callback({
-                    code    : 400,
-                    message : 'User deletion failed.'
-                });
-                return;
-            }
-
-            // Removes session from sessions collection
-            Session.destroy(clientToken, function(err) {
+        } else {
+            
+            // Remove user from UserMongoModel
+            UserMongoModel.findByIdAndRemove(userId, function(err, user) {
                 if (err) {
-                    // Error message handled by session model
+                    // TODO: Error message?
                     callback(err);
-                    return;
+                } else if (user) {
+                    callback({
+                        code    : 400,
+                        message : 'User deletion failed.'
+                    });
+                } else {
+
+                    // Removes session from sessions collection
+                    Session.destroy(clientToken, function(err) {
+                        if (err) {
+                            // Error message handled by session model
+                            callback(err);
+                            return;
+                        }
+                        callback(null);
+                    });
                 }
-                callback(null)
             });
-        });
-        
+        }
     });
 }
 
@@ -116,38 +112,38 @@ function changeUserPassword(clientToken, oldPassword, newPassword, callback) {
         if (err) {
             // Error message handled by session model
             callback(err);
-            return;
-        }
-        UserMongoModel.findById(userId, function(err, user) {
-            if (err) {
-                // TODO: Error message?
-                callback(err);
-                return;
-            }
-            if (user) {
-
-                // Verify password
-                if (user.password != oldPassword) {
-                    callback({
-                        code    : 400,
-                        message : 'Incorrect Password'
-                    }, null);
-                    return;
-                }
-                UserMongoModel.findByIdAndUpdate(userId, { password : newPassword }, function(err, user) {
+        } else {
+            UserMongoModel.findById(userId, function(err, user) {
                 if (err) {
                     // TODO: Error message?
                     callback(err);
-                    return;
+                } else if (!user) {
+                    callback({
+                        code    : 400,
+                        message : "User does not exist."
+                    });
+                } else {
+
+                    // Verify password
+                    if (user.password != oldPassword) {
+                        callback({
+                            code    : 400,
+                            message : 'Incorrect Password'
+                        });
+                    } else {
+                        UserMongoModel.findByIdAndUpdate(userId, { password : newPassword }, function(err, user) {
+                            if (err) {
+                                // TODO: Error message?
+                                callback(err);
+                                return;
+                            }
+                            callback(null);
+                        });
+                    }
                 }
-                callback(null);
-                });
-            } else
-                callback({
-                    code    : 400,
-                    message : "User does not exist."
-                }, null);
-        });
+                    
+            });
+        }
     });
 }
 
@@ -156,48 +152,49 @@ function userAuthentication(usernameEmail, password, callback) {
     UserMongoModel.findOne({$or : [{ username : usernameEmail }, { email : usernameEmail }]}, function(err, user) {
         if (err) {
             // TODO: Error message?
-            callback(err, null);
-            return;
-        }
-        if (user) {
+            callback(err);
+        } else if (!user) {
+            callback({
+                code    : 400,
+                message : "Username/Email does not exists."
+            });
+        } else {
+
             // Verify password
-            if (user.password == password) {
+            if (user.password != password) {
+                callback({
+                    code    : 400,
+                    message : "Incorrect password."
+                });
+            } else {
                 Session.create(user._id, function(err, session) {
                     if (err) {
                         // Error message handled by session model
-                        callback(err, null);
+                        callback(err);
                         return;
                     }
                     callback(null, session);
                 });
-            } else
-                callback({
-                    code    : 400,
-                    message : "Incorrect password."
-                }, null);
-        } else
-            callback({
-                code    : 400,
-                message : "Username/Email does not exists."
-            }, null);
+            }    
+        }
     });
 }
 
 // Takes a token string and verifies session exists
 function userReauthentication(clientToken, callback) {
-    Session.refresh(clientToken, function(err) {
+    Session.refresh(clientToken, function(err, token) {
         if (err) {
             // Error message handled by session model
             callback(err, null);
             return;
         }
-        callback(null, clientToken);
+        callback(null, token);
     });
 }
 
 // Takes a token string and removes session from MongoDB
 function disconnectUser(clientToken, callback) {
-    Session.delete(clientToken, function(err) {
+    Session.destroy(clientToken, function(err) {
         if (err) {
             // Error message handled by session model
             callback(err);
