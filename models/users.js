@@ -1,157 +1,169 @@
 'use strict';
 
-var Db        = require('/../config/database');
-var crypto    = require('crypto');
+var Db        = require('../config/database');
+var Session   = require('./sessions');
 var validator = require('validator');
+var mongoose  = require('mongoose');
 
 var UserSchema = mongoose.Schema({
     username : { type: String, required: true },
     email    : { type: String, required: true },
-    password : { type: String, required: true },
-    token    : { type: String, required: true }
+    password : { type: String, required: true }
 });
 
 var UserMongoModel = Db.model('users', UserSchema);
 
-// Generates a random unique token ID
-function generateToken() {
-    var token;
-
-    crypto.randomBytes(256, function(err, nonce) {
-        // TODO: Handle this error
-        token = nonce.toString('base64');
-    });
-    return token;
-}
-
-// Returns the default Time-To-Live of a token
-function getTtl() {
-    var ttl = 6000; // Decide default ttl
-    return ttl;
-}
-
-// Extends a token's Time-To-Live to the default ttl
-var extendTtl = function defaultTtl() {
-    return Date.now() + getTtl();
-}
-
-// Creates and return a new token with a unique ID and a Time-To-Live
-function createToken(ttl) {
-    var token = {
-        tokenID : generateToken(),
-        ttl     : Date.now() + defaultTtl()
-    }
-    return token;
-}
-
-
 function createUser(username, password, email, callback) {
-    var newUser = {
+    var newUser = new UserMongoModel({
         username : username,
         email    : email,
-        password : password,
-        token    : createToken(getTtl())  // How to set expiration time in the DB?
-    }
+        password : password
+    });
 
-    // Check if newUser.username is already in the db
-    UserMongoModel.findOne({ username : username }, function(err, user) {
-        if (err) {
-            // TODO: Error code && message?
+    // Check if newUser.username or newUser.email is already in UserMongoModel
+    // TODO: Split into two or find a better way.
+    UserMongoModel.find({$or : [{ username : username }, { email : email }]}).limit(1).exec(function(err, user) {
+        // TODO: Handle this error
+
+        if (user.length) {
+
+            // TODO: Error message if user already exists.
             callback(err, null);
             return;
         }
-    });
 
-    // Check if newUser.email is already in the db
-    UserMongoModel.findOne({ email : email }, function(err, user) {
-        if (err) {
-            // TODO: Error code && message?
-            callback(err, null);
-            return;
-        }
-    });
+        // Saves user to UserMongoModel
+        newUser.save(function(err, user) {
+            // TODO: Handle this error
 
-    UserMongoModel.create(newUser, function(err, user) {
-        callback(null, user.token);
-    });
-}
+            if (user) {
+                // Creates a new session with user._id
+                Session.create(user._id, function(err, session) {
+                    // TODO: Handle this error
 
-function deleteUser(tokenID, callback) {
-    UserMongoModel.findOneAndRemove({ token.tokenID : tokenID }, function(err, user) {
-        if (err) {
-            // TODO: Error code && message?
-            callback(err);
-            return;
-        }
-        // TODO: Delete the user form the database
-        callback(err)
+                    callback(null, session);
+                });
+            }
+        });
     });
 }
 
-function changeUserPassword(tokenID, oldPassword, newPassword, callback) {
-    UserMongoModel.findOne({ token.tokenID : tokenID, password : oldPassword }, function(err, user) {
+function deleteUser(clientToken, callback) {
+    Session.findUser(clientToken, function(err, userId) {
+        // TODO: Handle this error
         if (err) {
-            // TODO: Error code && message?
             callback(err);
             return;
         }
-        user.password = newPassword;
-        callback(null);
+        if (userId) {
+
+            // Remove user from UserMongoModel
+            UserMongoModel.findByIdAndRemove(userId, function(err) {
+                // TODO: Handle this error
+
+                // Removes session from Sessions Db
+                Session.delete(clientToken, function(err) {
+                    // TODO: Handle this error
+
+                    callback(null)
+                });
+            });
+        }
+    });
+}
+
+
+function changeUserPassword(clientToken, oldPassword, newPassword, callback) {
+    // TODO: Improve this code
+    Session.findUser(clientToken, function(err, userId) {
+        // TODO: Handle this error
+
+        if (userId) {
+            UserMongoModel.findById(userId, function(err, user) {
+
+                if (!user) {
+                    // TODO: Handle this error
+                    callback({
+                        code    : 400,
+                        message : "User doesn't exist"
+                    }, null);
+                    return;
+                }
+                // Validate password
+                if (user.password != oldPassword) {
+                    // TODO: Handle this error
+                    callback({
+                        code    : 400,
+                        message : 'Incorrect Password'
+                    }, null);
+                    return;
+                }
+                UserMongoModel.findByIdAndUpdate(userId, { password : newPassword }, function(err) {
+                    // TODO: Handle this error
+                    if (err) {
+                        callback(err);
+                        return;
+                    }
+                    callback(null);
+                });
+            });
+        }
     });
 }
 
 function userAuthentication(usernameEmail, password, callback) {
-    var newToken = createToken(ttl);
-
-    // TODO: How to make this code cleaner?
-    if (!validator.isEmail(usernameEmail)) {
-        UserMongoModel.findOne({ username : usernameEmail, password : password }, function(err, user) {
-            if (err) {
-                // TODO: Error code && message?
-                callback(err, null);
-                return;
-            }
-            user.token = newToken;
-            callback(null, user.token);
-        });
-    } else {
-        UserMongoModel.findOne({ email : usernameEmail, password : password }, function(err, user) {
-            if (err) {
-                // TODO: Error code && message?
-                callback(err, null);
-                return;
-            }
-            user.token = newToken;
-            callback(null, user.token);
-        });
-    }
-}
-
-function userReauthentication(tokenID, callback) {
-    UserMongoModel.findOne({ token.tokenID : tokenID }, function(err, user) {
+    UserMongoModel.findOne({$or : [{ username : usernameEmail }, { email : usernameEmail }]}, function(err, user) {
         if (err) {
-            // TODO: Error code && message?
             callback(err, null);
             return;
         }
 
-        // Extend token expiration time
-        user.token.tll = extendTtl());
-        callback(null, user.token);
+        if (user) {
+
+            // TODO: Handle this error
+            if (user.password == password) {
+                Session.create(user._id, function(err, session) {
+                    if (err) {
+                        callback(err, null);
+                        return;
+                    }
+                    callback(null, session);
+                });
+            } else {
+                callback({
+                code    : 400,
+                message : "Incorrect password."
+            }, null);
+            }
+        } else {
+            callback({
+                code    : 400,
+                message : "Username/Email does not exists."
+            }, null);
+        }
     });
 }
 
-function disconnectUser(tokenID, callback) {
-    UserMongoModel.findOne({ token.tokenID : tokenID }, function(err, user) {
+function userReauthentication(clientToken, callback) {
+    Session.refresh(clientToken, function(err) {
+        // TODO: Handle this error
         if (err) {
-            // TODO: Error code && message?
+            callback(err, null);
+            return;
+        }
+        callback(null, clientToken);
+    });
+}
+
+function disconnectUser(clientToken, callback) {
+    Session.delete(clientToken, function(err) {
+        // TODO: Handle this error
+        if (err) {
             callback(err);
             return;
         }
-
-        // Deletes current session token
-        user.token = null;
         callback(null);
+    })
 }
 
 var UserModel = {
