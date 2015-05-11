@@ -2,7 +2,7 @@
 
 module.exports = function(app) {
     var validator = require('validator');
-    var User      = require('/../models/user');
+    var User      = require('../models/users');
 
     // Returns true if contains only alphanumeric characters,
     // underscores and/or dashes.
@@ -99,24 +99,25 @@ module.exports = function(app) {
             return;
         }
         
-        User.create(username, password, email, function(err, token) {
+        User.create(username, password, email, function(err, session) {
             if (err) {
                 res.send(err);
                 return;
             }
             res.send({
                 code    : 200,
-                message : 'Account successfully created.'
-                token   : token.tokenID
-                ttl     : token.ttl
+                message : 'Account successfully created.',
+                // TODO: respond with token and ttl
+                token   : session.token
+                // ttl     : session.ttl
             });
         });
     }
 
     function deleteAccount(req, res) {
-        var tokenID = req.body.token;
+        var clientToken = req.body.token;
 
-        User.delete(tokenID, function(err) {
+        User.delete(clientToken, function(err) {
             if (err) {
                 res.send(err);
                 return;
@@ -129,11 +130,11 @@ module.exports = function(app) {
     }
 
     function changePassword(req, res) {
-        var tokenID       = req.body.token;
+        var clientToken = req.body.token;
         var oldPassword = validator.toString(validator.escape(req.body.oldPassword));
         var newPassword = validator.toString(validator.escape(req.body.newPassword));
 
-        User.changePassword(tokenID, oldPassword, newPassword, function(err) {
+        User.changePassword(clientToken, oldPassword, newPassword, function(err) {
             if (err) {
                 res.send(err);
                 return;
@@ -147,7 +148,7 @@ module.exports = function(app) {
     }
 
     function authenticate(req, res) {
-        var usernameEmail = validator.toString(validator.escape(req.body.usernameemail));
+        var usernameEmail = validator.toString(validator.escape(req.body.usernameEmail));
         var password      = validator.toString(validator.escape(req.body.password));
 
         if (!usernameEmail) {
@@ -185,24 +186,24 @@ module.exports = function(app) {
             return;
         }
 
-        User.login(usernameEmail, password, function(err, token) {
+        User.login(usernameEmail, password, function(err, session) {
             if (err) {
                 res.send(err);
                 return;
             }
             res.send({
                 code    : 200,
-                message : 'Login successful.'
-                token   : token.tokenID
-                ttl     : token.ttl
+                message : 'Login successful.',
+                // TODO: respond with token and ttl
+                // token   : session.token
+                // ttl     : session.ttl
             });
         });
     }
 
     function reauthenticate(req, res) {
-        var tokenID = req.body.token;
-        User.reauthenticate(tokenID, function(err, token) {
-            // TODO: Handle this error
+        var clientToken = req.body.token;
+        User.reauthenticate(clientToken, function(err, token) {
             if (err) {
                 res.send(err);
                 return;
@@ -210,23 +211,25 @@ module.exports = function(app) {
             res.send({
                 code    : 200,
                 message : 'Login successful.'
-                token   : token.tokenID
-                ttl     : token.ttl
+                // TODO: respond with token and ttl
+                // token   : token.ID
+                // ttl     : token.ttl
             })
         });
     }
 
     function logout(req, res) {
-        var tokenID = req.body.token;
-        User.logout(tokenID, function(err) {
-            // TODO: Handle this error
-
+        var clientToken = req.body.token;
+        User.logout(clientToken, function(err) {
+            if (err) {
+                res.send(err);
+                return;
+            }
             res.send({
                 code    : 200,
                 message : 'Logout successful.'
             })
         })
-        
     }
 
     app.post('/v1/user', createAccount);
