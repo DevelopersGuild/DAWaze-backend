@@ -4,14 +4,14 @@ var crypto    = require('crypto')
 
 // Generates a random string to use as a session token
 function generateToken() {
-	return crypto.randomBytes(256).toString('base64');
+    return crypto.randomBytes(256).toString('base64');
 }
 
 // Create the schema for a session
 var SessionSchema = mongoose.Schema({
 
-	// Defaults to a string of 256 characters
-    token	  : { type : String, default : generateToken },
+    // Defaults to a string of 256 characters
+    token     : { type : String, default : generateToken },
 
     // Defaults to the current time and expires in 7 days
     createdAt : { type : Date, default : Date.now, expires : '7d' },
@@ -25,100 +25,114 @@ var SessionMongoModel = Db.model('sessions', SessionSchema);
 
 // Takes a userId as an argument and returns the token string to the callback
 function findSessionByUserId(userId, callback) {
-	SessionMongoModel.findOne({ userId : userId }, function(err, session) {
-		if (err) {
-			// TODO: Error message?
-			callback(err, null);
-			return;
-		}
-		if (session)
-			callback(null, session.token);
-		else
-			callback({
-				code	: 400,
-				message : 'The session does not exist.'
-			}, null);
-	});
+    SessionMongoModel.findOne({ userId : userId }, function(err, session) {
+        if (err) {
+            // TODO: Error message?
+            callback(err, null);
+        } else if (!session) {
+            callback({
+                code    : 400,
+                message : 'The session does not exist.'
+            });
+        } else {
+            callback(null, session.token);
+        }
+    });
 }
 
 // Takes a token string as an argument and returns the userId to the callback
 function findUserByToken(clientToken, callback) {
-	SessionMongoModel.findOne({ token : clientToken }, function(err, session) {
-		if (err) {
-			// TODO: Error message?
-			callback(err, null);
-			return;
-		}
-		if (session)
-			callback(null, session.userId);
-		else
-			callback({
-				code	: 400,
-				message : 'The session does not exists.'
-			}, null);
-	});
+    SessionMongoModel.findOne({ token : clientToken }, function(err, session) {
+        if (err) {
+            // TODO: Error message?
+            callback(err, null);
+        } else if (!session) {
+            callback({
+                code    : 400,
+                message : 'The session does not exists.'
+            });
+        } else {
+            callback(null, session.userId);
+        }
+    });
 }
 
 // Creates a new session and attach user ObjectId to it
 function createSession(userId, callback) {
-	var newSession = new SessionMongoModel({ userId : userId });
+    var newSession = new SessionMongoModel({ userId : userId });
 
-	newSession.save(function (err, session) {
-		if (err) {
-			// TODO: Error message?
-			callback(err, null);
-			return;
-		}
-		if (session)
-			callback(null, session);
-		else 
-			callback({
-				code	: 400,
-				message : 'Session creation failed.'
-			}, null);
-	});
+    newSession.save(function (err, session) {
+        if (err) {
+            // TODO: Error message?
+            callback(err, null);
+        } else if (!session) {
+            callback({
+                code    : 400,
+                message : 'Session creation failed.'
+            });
+        } else {
+            callback(null, session);
+        }
+    });
 }
 
-// Takes a token string and deletes the session with that string from MongoDB.
-function deleteSession(clientToken, callback) {
-	SessionMongoModel.findOneAndRemove({ token : clientToken }, function(err, session) {
-		if (err) {
-			// TODO: Error message?
-			callback(err);
-			return;
-		}
-		if (session)
-			callback({
-				code	: 400,
-				message : 'Session deletion failed.'
-			});
-		else 
-			callback(null);
-	});
+// Takes a token string and deletes the session with that string from MongoDB
+function destroySession(clientToken, callback) {
+    SessionMongoModel.findOneAndRemove({ token : clientToken }, 
+                                       function(err, session) {
+        if (err) {
+            // TODO: Error message?
+            callback(err);
+        } else if (session) {
+            callback({
+                code    : 400,
+                message : 'Session destruction failed.'
+            });
+        } else {
+            callback(null);
+        }
+    });
 }
 
-// Takes a token string and update the createdAt field to Date.now()
+// Takes a token string, deletes the associated session, and makes a new one,
+// returning the new token to the callback
 function refreshSession(clientToken, callback) {
-	SessionMongoModel.findOneAndUpdate({ token : clientToken },
-									   {$set : { createdAt : Date.now }},
-									   function(err, session) {
-		if (err) {
-			// TODO: Error message?
-			callback(err);
-			return;
-		}
-		callback(null);
-	});
+    SessionMongoModel.findOne({ token : clientToken },
+                              function(err, session) {
+        if (err) {
+            // TODO: Error message?
+            callback(err);
+        } else if (!session) {
+            callback({
+                code    : 400,
+                message : 'The session does not exists.'
+            });
+        } else {
+            createSession(session.userId, function(err, newSession) {
+                if (err) {
+                    callback(err);
+                } else {
+                    destroySession(clientToken, function(err) {
+                        if (err) {
+                            callback(err);
+                        } else {
+                            callback(null, newSession.token);
+                        }
+                    })
+                }
+            });
+        }
+    });
 }
 
 
 
 var SessionModel = {
-	findSession : findSessionByUserId,
-	findUser    : findUserByToken,
-	create      : createSession,
-	delete      : deleteSession,
-	refresh     : refreshSession
+    findSession : findSessionByUserId,
+    findUser    : findUserByToken,
+    create      : createSession,
+    destroy     : destroySession,
+    refresh     : refreshSession
 };
 
 module.exports = SessionModel;
