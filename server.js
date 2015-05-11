@@ -16,10 +16,6 @@ var SERVER_PORT = process.env.SERVER_PORT || 9000;
 require('./routes/user')(app);
 require('./routes/map')(app);
 
-// Models
-var tag  = require('./models/tags');
-var user = require('./models/users');
-
 // Handle 404 Error
 app.use(function(req, res, next) {
   res.send('Not Found');
