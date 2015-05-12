@@ -30,4 +30,3 @@ var server = app.listen(SERVER_PORT, SERVER_ADDRESS, function () {
   console.log('Daze Backend API listening at http://%s:%s in %s mode.',
     host, port, app.get('env'));
 });
-
