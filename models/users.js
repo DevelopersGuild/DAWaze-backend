@@ -7,9 +7,10 @@ var mongoose  = require('mongoose');
 
 // Create the schema for a user
 var UserSchema = mongoose.Schema({
-    username : { type: String, required: true },
-    email    : { type: String, required: true },
-    password : { type: String, required: true }
+    username      : { type: String, required: true },
+    usernameLower : { type: String, required: true },
+    email         : { type: String, required: true },
+    password      : { type: String, required: true }
 });
 
 // Creates a collection named users in MongoDB
@@ -18,13 +19,14 @@ var UserMongoModel = Db.model('users', UserSchema);
 // Takes username, password, email and saves a new user to MongoDB
 function createUser(username, password, email, callback) {
     var newUser = new UserMongoModel({
-        username : username,
-        email    : email,
-        password : password
+        username      : username,
+        usernameLower : username.toLowerCase(),
+        email         : email,
+        password      : password
     });
 
     // Check if newUser.username is already in UserMongoModel
-    UserMongoModel.findOne({ username : username.toLowerCase() }, function(err, user) {
+    UserMongoModel.findOne({ usernameLower : username.toLowerCase() }, function(err, user) {
         if (user) {
             callback({
                 code    : 400,
@@ -144,7 +146,7 @@ function changeUserPassword(clientToken, oldPassword, newPassword, callback) {
 
 // Takes a username/email and password and creates a new session, returning the token string to callback
 function userAuthentication(usernameEmail, password, callback) {
-    UserMongoModel.findOne({$or : [{ username : usernameEmail.toLowerCase() }, { email : usernameEmail.toLowerCase() }]}, function(err, user) {
+    UserMongoModel.findOne({$or : [{ usernameLower : usernameEmail.toLowerCase() }, { email : usernameEmail.toLowerCase() }]}, function(err, user) {
         if (err) {
             // TODO: Error message?
             callback(err);
