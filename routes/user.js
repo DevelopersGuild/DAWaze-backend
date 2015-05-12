@@ -1,238 +1,237 @@
 'use strict';
 
 module.exports = function(app) {
-    var validator = require('validator');
-    var User      = require('../models/users');
+  var validator = require('validator');
+  var User      = require('../models/users');
 
-    // Returns true if contains only alphanumeric characters,
-    // underscores and/or dashes.
-    function isUsername(username) {
-        var regEx = /^[a-zA-Z0-9-_]+$/;
-        return regEx.test(username);
+  // Returns true if contains only alphanumeric characters,
+  // underscores and/or dashes.
+  function isUsername(username) {
+    var regEx = /^[a-zA-Z0-9-_]+$/;
+    return regEx.test(username);
+  }
+
+  function createAccount(req, res) {
+    var username = validator.toString(validator.escape(req.body.username));
+    var password = validator.toString(validator.escape(req.body.password));
+    var email    = validator.toString(validator.escape(req.body.email));
+
+    // Captcha key
+
+    /////////////////////
+    // USERNAME CHECKS //
+    /////////////////////
+
+    // Checks empty username field
+    if (!username) {
+      res.send({
+        code    : 400,
+        message : 'Username field is required.'
+      });
+      return;
     }
 
-    function createAccount(req, res) {
-        var username = validator.toString(validator.escape(req.body.username));
-        var password = validator.toString(validator.escape(req.body.password));
-        var email    = validator.toString(validator.escape(req.body.email));
-
-        // Captcha key
-
-        /////////////////////
-        // USERNAME CHECKS //
-        /////////////////////
-
-        // Checks empty username field
-        if (!username) {
-            res.send({
-                code    : 400,
-                message : 'Username field is required.'
-            });
-            return;
-        }
-
-        // Validate username (alphanumeric characters, underscore and/or dashes)
-        if (!isUsername(username)) {
-            res.send({
-                code    : 400,
-                message : 'Username can only contain alphanumeric characters, ' +
-                          'underscores, and/or dashes.'
-            });
-            return;
-        }
-
-        // TODO: Decide min and max
-        // Check username length
-        if (!validator.isLength(username, 4, 12)) {
-            res.send({
-                code    : 400,
-                message : 'Username must be between 4 and 12 characters.'
-            });
-            return;
-        }
-
-        /////////////////////
-        // PASSWORD CHECKS //
-        /////////////////////
-
-        // Checks empty password field
-        if (!password) {
-            res.send({
-                code    : 400,
-                message : 'Password field is required.'
-            });
-            return;
-        }
-
-        // Check is valid password (must contain at least one letter and number)
-        
-        // TODO: define min and max
-        // Check password length
-        if (!validator.isLength(password, 4, 512)) {
-            res.send({
-                code    : 400,
-                message : 'Password must be between 5 and 512 characters.'
-            });
-            return;
-        }
-
-        //////////////////
-        // EMAIL CHECKS //
-        //////////////////
-
-        // Validate email
-        if (!validator.isEmail(email)) {
-            res.send({
-                code    : 400,
-                message : 'Not a valid email address.'
-            });
-            return;
-        }
-
-        // TODO: define min and max
-        // Check email length
-        if (!validator.isLength(email, 4, 512)) {
-            res.send({
-                code    : 400,
-                message : 'Email must be between 4 and 512 characters long.'
-            });
-            return;
-        }
-        
-        User.create(username, password, email, function(err, session) {
-            if (err) {
-                res.send(err);
-                return;
-            }
-            res.send({
-                code    : 200,
-                message : 'Account successfully created.',
-                token   : session.token,
-                ttl     : session.createdAt.setDate(session.createdAt.getDate() + 7).toString()
-            });
-        });
+    // Validate username (alphanumeric characters, underscore and/or dashes)
+    if (!isUsername(username)) {
+      res.send({
+        code    : 400,
+        message : 'Username can only contain alphanumeric characters, ' +
+        'underscores, and/or dashes.'
+      });
+      return;
     }
 
-    function deleteAccount(req, res) {
-        var clientToken = req.body.token;
-
-        User.delete(clientToken, function(err) {
-            if (err) {
-                res.send(err);
-                return;
-            }
-            res.send({
-                code    : 200,
-                message : 'Account successfully deleted.'
-            });
-        });
+    // TODO: Decide min and max
+    // Check username length
+    if (!validator.isLength(username, 4, 12)) {
+      res.send({
+        code    : 400,
+        message : 'Username must be between 4 and 12 characters.'
+      });
+      return;
     }
 
-    function changePassword(req, res) {
-        var clientToken = req.body.token;
-        var oldPassword = validator.toString(validator.escape(req.body.oldPassword));
-        var newPassword = validator.toString(validator.escape(req.body.newPassword));
+    /////////////////////
+    // PASSWORD CHECKS //
+    /////////////////////
 
-        User.changePassword(clientToken, oldPassword, newPassword, function(err) {
-            if (err) {
-                res.send(err);
-                return;
-            } 
-            res.send({
-                code    : 200,
-                message : 'Password has been changed.'
-            });
-        });
-        
+    // Checks empty password field
+    if (!password) {
+      res.send({
+        code    : 400,
+        message : 'Password field is required.'
+      });
+      return;
     }
 
-    function authenticate(req, res) {
-        var usernameEmail = validator.toString(validator.escape(req.body.usernameEmail));
-        var password      = validator.toString(validator.escape(req.body.password));
-
-        if (!usernameEmail) {
-            res.send({
-                code    : 400,
-                message : 'Username/Email field is required.'
-            });
-        }
-
-        // TODO: Decide on min and max
-        // Check usernameEmail length
-        if (!validator.isLength(usernameEmail, 4, 512)) {
-            res.send({
-                code    : 400,
-                message : 'Username/Email must be between 5 and 512 characters.'
-            });
-            return;
-        }
-
-        if (!password) {
-            res.send({
-                code    : 400,
-                message : 'Password field is required.'
-            });
-            return;
-        }
-
-        // TODO: Decide on min and max
-        // Check password length
-        if (!validator.isLength(password, 4, 512)) {
-            res.send({
-                code    : 400,
-                message : 'Password must be between 5 and 512 characters.'
-            });
-            return;
-        }
-
-        User.login(usernameEmail, password, function(err, session) {
-            if (err) {
-                res.send(err);
-                return;
-            }
-            res.send({
-                code    : 200,
-                message : 'Login successful.',
-                token   : session.token,
-                ttl     : Date.now()
-            });
-        });
+    // Check is valid password (must contain at least one letter and number)
+    
+    // TODO: define min and max
+    // Check password length
+    if (!validator.isLength(password, 4, 512)) {
+      res.send({
+        code    : 400,
+        message : 'Password must be between 5 and 512 characters.'
+      });
+      return;
     }
 
-    function reauthenticate(req, res) {
-        var clientToken = req.body.token;
-        User.reauthenticate(clientToken, function(err, session) {
-            if (err) {
-                res.send(err);
-                return;
-            }
-            res.send({
-                code    : 200,
-                message : 'Login successful.',
-                token   : session.token,
-                ttl     : Date.now()
-            });
-        });
+    //////////////////
+    // EMAIL CHECKS //
+    //////////////////
+
+    // Validate email
+    if (!validator.isEmail(email)) {
+      res.send({
+        code    : 400,
+        message : 'Not a valid email address.'
+      });
+      return;
     }
 
-    function logout(req, res) {
-        var clientToken = req.body.token;
-        User.logout(clientToken, function(err) {
-            if (err) {
-                res.send(err);
-                return;
-            }
-            res.send({
-                code    : 200,
-                message : 'Logout successful.'
-            })
-        })
+    // TODO: define min and max
+    // Check email length
+    if (!validator.isLength(email, 4, 512)) {
+      res.send({
+        code    : 400,
+        message : 'Email must be between 4 and 512 characters long.'
+      });
+      return;
+    }
+    
+    User.create(username, password, email, function(err, session) {
+      if (err) {
+        res.send(err);
+        return;
+      }
+      res.send({
+        code    : 200,
+        message : 'Account successfully created.',
+        token   : session.token,
+        ttl     : session.createdAt + (60*60*24*7)
+      });
+    });
+  }
+
+  function deleteAccount(req, res) {
+    var clientToken = req.body.token;
+
+    User.delete(clientToken, function(err) {
+      if (err) {
+        res.send(err);
+        return;
+      }
+      res.send({
+        code    : 200,
+        message : 'Account successfully deleted.'
+      });
+    });
+  }
+
+  function changePassword(req, res) {
+    var clientToken = req.body.token;
+    var oldPassword = validator.toString(validator.escape(req.body.oldPassword));
+    var newPassword = validator.toString(validator.escape(req.body.newPassword));
+
+    User.changePassword(clientToken, oldPassword, newPassword, function(err) {
+      if (err) {
+        res.send(err);
+        return;
+      } 
+      res.send({
+        code    : 200,
+        message : 'Password has been changed.'
+      });
+    });   
+  }
+
+  function authenticate(req, res) {
+    var usernameEmail = validator.toString(validator.escape(req.body.usernameEmail));
+    var password      = validator.toString(validator.escape(req.body.password));
+
+    if (!usernameEmail) {
+      res.send({
+        code    : 400,
+        message : 'Username/Email field is required.'
+      });
     }
 
-    app.post('/v1/user', createAccount);
-    app.delete('/v1/user', deleteAccount);
-    app.put('/v1/user/password', changePassword);
-    app.post('/v1/user/authenticate', authenticate);
-    app.post('/v1/user/reauthenticate', reauthenticate);
-    app.post('/v1/user/logout', logout);
+    // TODO: Decide on min and max
+    // Check usernameEmail length
+    if (!validator.isLength(usernameEmail, 4, 512)) {
+      res.send({
+        code    : 400,
+        message : 'Username/Email must be between 5 and 512 characters.'
+      });
+      return;
+    }
+
+    if (!password) {
+      res.send({
+        code    : 400,
+        message : 'Password field is required.'
+      });
+      return;
+    }
+
+    // TODO: Decide on min and max
+    // Check password length
+    if (!validator.isLength(password, 4, 512)) {
+      res.send({
+        code    : 400,
+        message : 'Password must be between 5 and 512 characters.'
+      });
+      return;
+    }
+
+    User.login(usernameEmail, password, function(err, session) {
+      if (err) {
+        res.send(err);
+        return;
+      }
+      res.send({
+        code    : 200,
+        message : 'Login successful.',
+        token   : session.token,
+        ttl     : session.createdAt + (60*60*24*7)
+      });
+    });
+  }
+
+  function reauthenticate(req, res) {
+    var clientToken = req.body.token;
+    User.reauthenticate(clientToken, function(err, session) {
+      if (err) {
+        res.send(err);
+        return;
+      }
+      res.send({
+        code    : 200,
+        message : 'Login successful.',
+        token   : session.token,
+        ttl     : session.createdAt + (60*60*24*7)
+      });
+    });
+  }
+
+  function logout(req, res) {
+    var clientToken = req.body.token;
+    User.logout(clientToken, function(err) {
+      if (err) {
+        res.send(err);
+        return;
+      }
+      res.send({
+        code    : 200,
+        message : 'Logout successful.'
+      })
+    })
+  }
+
+  app.post('/v1/user', createAccount);
+  app.delete('/v1/user', deleteAccount);
+  app.put('/v1/user/password', changePassword);
+  app.post('/v1/user/authenticate', authenticate);
+  app.post('/v1/user/reauthenticate', reauthenticate);
+  app.post('/v1/user/logout', logout);
 }
