@@ -25,7 +25,7 @@ var SessionMongoModel = Db.model('sessions', SessionSchema);
 
 // Takes a userId as an argument and returns the token string to the callback
 function findSessionByUserId(userId, callback) {
-    SessionMongoModel.findOne({ userId : userId }, function(err, session) {
+    SessionMongoModel.findOne({ userId : userId.toLowerCase() }, function(err, session) {
         if (err) {
             // TODO: Error message?
             callback(err, null);

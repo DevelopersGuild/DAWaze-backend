@@ -24,7 +24,7 @@ function createUser(username, password, email, callback) {
     });
 
     // Check if newUser.username is already in UserMongoModel
-    UserMongoModel.find({ username : username }).limit(1).exec(function(err, user) {
+    UserMongoModel.find({ username : username.toLowerCase() }).limit(1).exec(function(err, user) {
         if (user.length) {
             callback({
                 code    : 400,
@@ -33,7 +33,7 @@ function createUser(username, password, email, callback) {
         } else {
 
             // Check if newUser.email is already in UserMongoModel
-            UserMongoModel.find({ email : email }).limit(1).exec(function(err, user) {
+            UserMongoModel.find({ email : email.toLowerCase() }).limit(1).exec(function(err, user) {
                 if (user.length) {
                     callback({
                         code    : 400,
@@ -79,7 +79,7 @@ function deleteUser(clientToken, callback) {
         } else {
             
             // Remove user from UserMongoModel
-            UserMongoModel.findByIdAndRemove(userId, function(err, user) {
+            UserMongoModel.findByIdAndRemove(userId.toLowerCase(), function(err, user) {
                 if (err) {
                     // TODO: Error message?
                     callback(err);
@@ -108,7 +108,7 @@ function changeUserPassword(clientToken, oldPassword, newPassword, callback) {
             // Error message handled by session model
             callback(err);
         } else {
-            UserMongoModel.findById(userId, function(err, user) {
+            UserMongoModel.findById(userId.toLowerCase(), function(err, user) {
                 if (err) {
                     // TODO: Error message?
                     callback(err);
@@ -126,7 +126,7 @@ function changeUserPassword(clientToken, oldPassword, newPassword, callback) {
                             message : 'Incorrect Password'
                         });
                     } else {
-                        UserMongoModel.findByIdAndUpdate(userId, { password : newPassword }, function(err, user) {
+                        UserMongoModel.findByIdAndUpdate(userId.toLowerCase(), { password : newPassword }, function(err, user) {
                             if (err) {
                                 // TODO: Error message?
                                 callback(err);
@@ -144,7 +144,7 @@ function changeUserPassword(clientToken, oldPassword, newPassword, callback) {
 
 // Takes a username/email and password and creates a new session, returning the token string to callback
 function userAuthentication(usernameEmail, password, callback) {
-    UserMongoModel.findOne({$or : [{ username : usernameEmail }, { email : usernameEmail }]}, function(err, user) {
+    UserMongoModel.findOne({$or : [{ username : usernameEmail.toLowerCase() }, { email : usernameEmail.toLowerCase() }]}, function(err, user) {
         if (err) {
             // TODO: Error message?
             callback(err);
