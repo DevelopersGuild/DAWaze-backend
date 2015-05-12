@@ -24,8 +24,8 @@ function createUser(username, password, email, callback) {
     });
 
     // Check if newUser.username is already in UserMongoModel
-    UserMongoModel.find({ username : username.toLowerCase() }).limit(1).exec(function(err, user) {
-        if (user.length) {
+    UserMongoModel.findOne({ username : username.toLowerCase() }, function(err, user) {
+        if (user) {
             callback({
                 code    : 400,
                 message : 'Username already exists'
@@ -33,8 +33,8 @@ function createUser(username, password, email, callback) {
         } else {
 
             // Check if newUser.email is already in UserMongoModel
-            UserMongoModel.find({ email : email.toLowerCase() }).limit(1).exec(function(err, user) {
-                if (user.length) {
+            UserMongoModel.findOne({ email : email.toLowerCase() }, function(err, user) {
+                if (user) {
                     callback({
                         code    : 400,
                         message : 'Email already exists'
