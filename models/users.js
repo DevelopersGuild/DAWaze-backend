@@ -4,6 +4,7 @@ var Db        = require('../config/database');
 var Session   = require('./sessions');
 var validator = require('validator');
 var mongoose  = require('mongoose');
+var async     = require('async');
 
 // Create the schema for a user
 var UserSchema = mongoose.Schema({
@@ -25,177 +26,227 @@ function createUser(username, password, email, callback) {
     password      : password
   });
 
-  // Check if newUser.username is already in UserMongoModel
-  UserMongoModel.findOne({ usernameLower : username.toLowerCase() }, function(err, user) {
-    if (user) {
-      callback({
-        code    : 400,
-        message : 'Username already exists'
-      });
-    } else {
+  async.waterfall([
+    function(next) {
+      async.parallel([
+        function(next) {
 
-      // Check if newUser.email is already in UserMongoModel
-      UserMongoModel.findOne({ email : email.toLowerCase() }, function(err, user) {
-        if (user) {
-          callback({
-            code    : 400,
-            message : 'Email already exists'
-          });
-        } else {
-
-          // Saves user to UserMongoModel
-          newUser.save(function(err, user) {
-            if (err) {
-              // TODO: Error message?
-              callback(err);
-            } else if (!user) {
-              callback({
+          // Check if newUser.username is already in UserMongoModel
+          UserMongoModel.findOne({ usernameLower : username.toLowerCase() },
+                         function(err, user) {
+            if (user) {
+              next({
                 code    : 400,
-                message : 'User creation failed.'
+                message : 'Username already exists'
               });
-            } else {
+            }
+            next(null);
+          });
+        },
+        function(next) {
 
-              // Creates a new session with user._id
-              Session.create(user._id, function(err, session) {
-                if (err) {
-                  // Error message handled by session model
-                  callback(err);
-                  return;
-                }
-                callback(null, session);
+          // Check if newUser.email is already in UserMongoModel
+          UserMongoModel.findOne({ email : email.toLowerCase() },
+                                 function(err, user) {
+            if (user) {
+              next({
+                code    : 400,
+                message : 'Email already exists'
               });
-            } 
+            }
+            next(null);
+          });
+        }
+      ], next);
+    },
+    function(next) {
+      newUser.save(function(err, user) {
+        if (err) {
+
+          // TODO: Error message?
+          next(err);
+        } else if (!user) {
+          next({
+            code    : 400,
+            message : 'User creation failed.'
           });
         }
       });
+    },
+    function(next) {
+      Session.create(user._id, function(err, session) {
+        if (err) {
+
+          // Error message handled by session model
+          next(err);
+        }
+        next(null, session);
+      });
     }
-  });
+  ], callback);
 }
 
 // Takes a token string and deletes the associated user and session from MongoDB
 function deleteUser(clientToken, callback) {
-  Session.findUser(clientToken, function(err, userId) {
-    if (err) {
-      // Error message handled by session model
-      callback(err);
-    } else {
+  async.waterfall([
+    function(next) {
+      Session.findUser(clientToken, function(err, userId) {
+        if (err) {
+
+          // Error message handled by session model
+          next(err);
+        }
+        next(null, userId);
+      });
+    },
+
+    // TODO: Should user removal and session destruction happen in parralel?
+    function(userId, next) {
 
       // Remove user from UserMongoModel
-      UserMongoModel.findByIdAndRemove(userId.toLowerCase(), function(err, user) {
+      UserMongoModel.findByIdAndRemove(userId.toLowerCase(),
+                                       function(err, user) {
         if (err) {
           // TODO: Error message?
-          callback(err);
-        } else {
-
-          // Removes session from sessions collection
-          Session.destroy(clientToken, function(err) {
-            if (err) {
-              // Error message handled by session model
-              callback(err);
-              return;
-            }
-            callback(null);
-          });
+          next(err);
         }
+        next(null);
+      });
+    },
+    function(next) {
+
+      // Removes session from sessions collection
+      Session.destroy(clientToken, function(err) {
+        if (err) {
+          // Error message handled by session model
+          next(err);
+        }
+        next(null);
       });
     }
-  });
+  ], callback);
 }
 
-// Takes a token string, password, new password and updates the user collection with new password
+// Takes a token string, password, new password and updates the user collection
+// with new password
 function changeUserPassword(clientToken, oldPassword, newPassword, callback) {
-  // TODO: Improve this code
-  Session.findUser(clientToken, function(err, userId) {
-    if (err) {
-      // Error message handled by session model
-      callback(err);
-    } else {
-      UserMongoModel.findById(userId.toLowerCase(), function(err, user) {
+  async.waterfall([
+    function(next) {
+      Session.findUser(clientToken, function(err, userId) {
         if (err) {
-          // TODO: Error message?
-          callback(err);
-        } else if (!user) {
-          callback({
-            code    : 400,
-            message : "User does not exist."
-          });
-        } else {
 
-          // Verify password
-          if (user.password != oldPassword) {
-            callback({
-              code    : 400,
-              message : 'Incorrect Password'
-            });
-          } else {
-            UserMongoModel.findByIdAndUpdate(userId.toLowerCase(),
-                                             { password : newPassword },
-                                             function(err, user) {
-              if (err) {
-                // TODO: Error message?
-                callback(err);
-                return;
-              }
-              callback(null);
-            });
-          }
+          // Error message handled by session model
+          next(err);
         }
+        next(null, userId);
+      });
+    },
+    function(userId, next) {
+      UserMongoModel.findById(userId, function(err, user) {
+        if (err) {
+
+          // TODO: Error message?
+          next(err);
+        } else if (!user) {
+          next({
+            code    : 400,
+            message : 'User does not exist.'
+          });
+        } else if (user.password != oldPassword) {
+          next({
+            code    : 400,
+            message : 'Incorrect Password'
+          });
+        }
+        next(null, user.userdId);
+      });
+    },
+    function(userId, next) {
+      UserMongoModel.findByIdAndUpdate(userId, { password : newPassword },
+                                       function(err, user) {
+        if (err) {
+
+          // TODO: Error message?
+          next(err);
+        }
+        next(null);
       });
     }
-  });
+  ], callback);
 }
 
-// Takes a username/email and password and creates a new session, returning the token string to callback
+// Takes a username/email and password and creates a new session,
+// returning the session to callback
 function userAuthentication(usernameEmail, password, callback) {
-  UserMongoModel.findOne({$or : [{ usernameLower : usernameEmail.toLowerCase() },
-                         { email : usernameEmail.toLowerCase() }]}, 
+  async.waterfall([
+    function(next) {
+      UserMongoModel.findOne({$or : [
+                         { usernameLower : usernameEmail.toLowerCase() },
+                         { email : usernameEmail.toLowerCase() }]},
                          function(err, user) {
-    if (err) {
-      // TODO: Error message?
-      callback(err);
-    } else if (!user) {
-      callback({
-        code    : 400,
-        message : "Username/Email does not exists."
-      });
-    } else {
+        if (err) {
 
-      // Verify password
-      if (user.password != password) {
-        callback({
-          code    : 400,
-          message : "Incorrect password."
-        });
-      } else {
-        Session.create(user._id, function(err, session) {
-          if (err) {
-            // Error message handled by session model
-            callback(err);
-            return;
-          }
-          callback(null, session);
-        });
-      }    
+          // TODO: Error message?
+          next(err);
+        } else if (!user) {
+          next({
+            code    : 400,
+            message : 'Username/Email does not exists.'
+          });
+        } else if (user.password != password) {
+          next({
+            code    : 400,
+            message : 'Incorrect password.'
+          });
+        }
+        next(null, user);
+      });
+    },
+    function(user, next) {
+      Session.create(user._id, function(err, session) {
+        if (err) {
+
+          // Error message handled by session model
+          next(err);
+        }
+        next(null, session);
+      });
     }
-  });
+  ], callback);
 }
 
-// Takes a token string and verifies session exists
+
+// Takes a token string, deletes found session and creates a new one
 function userReauthentication(clientToken, callback) {
-  Session.refresh(clientToken, function(err, session) {
-    if (err) {
-      // Error message handled by session model
-      callback(err, null);
-      return;
+  async.waterfall([
+    function(next) {
+      Session.destroy(clientToken, function(err, session) {
+        if (err) {
+
+          // Error message handled by session model
+          next(err);
+        }
+        next(null, session.userId);
+      });
+    },
+    function(userId, next) {
+      Session.create(userId, function(err, token) {
+        if (err) {
+
+          // Error message handled by session model
+          next(err);
+        }
+        next(null, token);
+      });
     }
-    callback(null, session);
-  });
+  ], callback);
 }
 
 // Takes a token string and removes session from MongoDB
 function disconnectUser(clientToken, callback) {
   Session.destroy(clientToken, function(err) {
     if (err) {
+
       // Error message handled by session model
       callback(err);
       return;
