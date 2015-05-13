@@ -19,38 +19,36 @@ var UserMongoModel = Db.model('users', UserSchema);
 
 // Takes username, password, email and saves a new user to MongoDB
 function createUser(username, password, email, callback) {
-async.waterfall([
+  async.waterfall([
+
+    // TODO: Try to put these in a parallel
     function(next) {
-      async.parallel([
-        function(next) {
 
-          // Check if newUser.username is already in UserMongoModel
-          UserMongoModel.findOne({ usernameLower : username.toLowerCase() },
-                         function(err, user) {
-            if (user) {
-              next({
-                code    : 400,
-                message : 'Username already exists'
-              });
-            }
-            next(null);
-          });
-        },
-        function(next) {
-
-          // Check if newUser.email is already in UserMongoModel
-          UserMongoModel.findOne({ email : email.toLowerCase() },
-                                 function(err, user) {
-            if (user) {
-              next({
-                code    : 400,
-                message : 'Email already exists'
-              });
-            }
-            next(null);
+      // Check if newUser.username is already in UserMongoModel
+      UserMongoModel.findOne({ usernameLower : username.toLowerCase() },
+                     function(err, user) {
+        if (user) {
+          next({
+            code    : 400,
+            message : 'Username already exists'
           });
         }
-      ], next);
+        next(null);
+      });
+    },
+    function(next) {
+
+      // Check if newUser.email is already in UserMongoModel
+      UserMongoModel.findOne({ email : email.toLowerCase() },
+                             function(err, user) {
+        if (user) {
+          next({
+            code    : 400,
+            message : 'Email already exists'
+          });
+        }
+        next(null);
+      });
     },
     function(next) {
       var newUser = new UserMongoModel({
@@ -100,7 +98,7 @@ function deleteUser(clientToken, callback) {
     function(userId, next) {
 
       // Remove user from UserMongoModel
-      UserMongoModel.findByIdAndRemove(userId.toLowerCase(),
+      UserMongoModel.findByIdAndRemove(userId,
                                        function(err, user) {
         if (err) {
           // TODO: Error message?
@@ -148,13 +146,13 @@ function changeUserPassword(clientToken, oldPassword, newPassword, callback) {
             code    : 400,
             message : 'User does not exist.'
           });
-        } else if (user.password !== oldPassword) {
+        } else if (user.password != oldPassword) {
           next({
             code    : 400,
             message : 'Incorrect Password'
           });
         }
-        next(null, user.userdId);
+        next(null, userId);
       });
     },
     function(userId, next) {
@@ -216,13 +214,23 @@ function userAuthentication(usernameEmail, password, callback) {
 function userReauthentication(clientToken, callback) {
   async.waterfall([
     function(next) {
+      Session.findUser(clientToken, function(err, userId) {
+        if (err) {
+
+          // Error message handled by session model
+          next(err);
+        }
+        next(null, userId);
+      });
+    },
+    function(userId, next) {
       Session.destroy(clientToken, function(err, session) {
         if (err) {
 
           // Error message handled by session model
           next(err);
         }
-        next(null, session.userId);
+        next(null, userId);
       });
     },
     function(userId, next) {
