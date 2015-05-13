@@ -2,16 +2,16 @@
 
 module.exports = function(app) {
   var validator = require('validator');
-  var Tag       = require('../models/tags');
+  var Marker    = require('../models/markers');
 
-  function newTag(req, res) {
-    var token = validator.toString(validator.escape(req.body.token));
-    var title = validator.toString(validator.escape(req.body.title));
-    var lat   = validator.toString(validator.escape(req.body.lat));
-    var lon   = validator.toString(validator.escape(req.body.lon));
-    var tag   = req.body.tag;
-    var user  = req.body.user;
-    var ttl   = req.body.ttl;
+  function newMarker(req, res) {
+    var token  = validator.toString(validator.escape(req.body.token));
+    var title  = validator.toString(validator.escape(req.body.title));
+    var lat    = validator.toString(validator.escape(req.body.lat));
+    var lon    = validator.toString(validator.escape(req.body.lon));
+    var marker = req.body.marker;
+    var user   = req.body.user;
+    var ttl    = req.body.ttl;
 
     //////////////////
     // TITLE CHECKS //
@@ -21,7 +21,7 @@ module.exports = function(app) {
     if (!title) {
       res.send({
         code    : 400,
-        message : "Title field is required."
+        message : 'Title field is required.'
       });
       return;
     }
@@ -31,8 +31,8 @@ module.exports = function(app) {
     if (!validator.isLength(title, 5, 512)) {
       res.send({
         code    : 400,
-        message : "Title must be between 5 and 512 characters."
-      })
+        message : 'Title must be between 5 and 512 characters.'
+      });
     }
 
     // Check for vulgarness??? (Profanity Util)
@@ -45,7 +45,7 @@ module.exports = function(app) {
     if (!lat) {
       res.send({
         code    : 400,
-        message : "Latitude field is required."
+        message : 'Latitude field is required.'
       });
       return;
     }
@@ -56,7 +56,7 @@ module.exports = function(app) {
     if (!lon) {
       res.send({
         code    : 400,
-        message : "Longitude field is required."
+        message : 'Longitude field is required.'
       });
       return;
     }
@@ -69,39 +69,40 @@ module.exports = function(app) {
 
     // Check if valid ttl
 
-    Tag.create(token, title, lat, lon, tag, user, ttl, function (err, tag) {
+    Marker.create(token, title, lat, lon, marker, user, ttl,
+                  function (err, marker) {
       if (err) {
         res.send(err);
         return;
       }
       res.send({
         code    : 200,
-        message : "Tag successfully created",
-        tag     : tag
+        message : 'Marker successfully created',
+        marker  : marker
       });
     });
   }
 
-  function deleteTag(req, res) {
+  function deleteMarker(req, res) {
     var token = req.body.token;
 
     // Any checks??
 
-    Tag.delete(function(err) {
+    Marker.delete(function(err) {
       if (err) {
         res.send(err);
         return;
       }
       res.send({
         code    : 200,
-        message : "Tag successfully deleted"
+        message : 'Marker successfully deleted'
       });
     });
   }
 
   // What is the structure of this method?
-  // app.get('/v1/map', getTag);
+  // app.get('/v1/map', getMarker);
 
-  app.post('/v1/map/tag', newTag);
-  app.delete('/v1/map/tag', deleteTag);
-}
+  app.post('/v1/map/marker', newMarker);
+  app.delete('/v1/map/marker', deleteMarker);
+};
