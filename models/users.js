@@ -19,14 +19,7 @@ var UserMongoModel = Db.model('users', UserSchema);
 
 // Takes username, password, email and saves a new user to MongoDB
 function createUser(username, password, email, callback) {
-  var newUser = new UserMongoModel({
-    username      : username,
-    usernameLower : username.toLowerCase(),
-    email         : email,
-    password      : password
-  });
-
-  async.waterfall([
+async.waterfall([
     function(next) {
       async.parallel([
         function(next) {
@@ -60,6 +53,13 @@ function createUser(username, password, email, callback) {
       ], next);
     },
     function(next) {
+      var newUser = new UserMongoModel({
+        username      : username,
+        usernameLower : username.toLowerCase(),
+        email         : email.toLowerCase(),
+        password      : password
+      });
+
       newUser.save(function(err, user) {
         if (err) {
 
@@ -71,9 +71,10 @@ function createUser(username, password, email, callback) {
             message : 'User creation failed.'
           });
         }
+        next(null, user);
       });
     },
-    function(next) {
+    function(user, next) {
       Session.create(user._id, function(err, session) {
         if (err) {
 
@@ -152,7 +153,7 @@ function changeUserPassword(clientToken, oldPassword, newPassword, callback) {
             code    : 400,
             message : 'User does not exist.'
           });
-        } else if (user.password != oldPassword) {
+        } else if (user.password !== oldPassword) {
           next({
             code    : 400,
             message : 'Incorrect Password'
