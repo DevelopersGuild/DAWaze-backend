@@ -65,7 +65,7 @@ module.exports = function(app) {
     }
 
     // Check is valid password (must contain at least one letter and number)
-    
+
     // TODO: define min and max
     // Check password length
     if (!validator.isLength(password, 4, 512)) {
@@ -98,7 +98,7 @@ module.exports = function(app) {
       });
       return;
     }
-    
+
     User.create(username, password, email, function(err, session) {
       if (err) {
         res.send(err);
@@ -137,12 +137,12 @@ module.exports = function(app) {
       if (err) {
         res.send(err);
         return;
-      } 
+      }
       res.send({
         code    : 200,
         message : 'Password has been changed.'
       });
-    });   
+    });
   }
 
   function authenticate(req, res) {
@@ -224,8 +224,8 @@ module.exports = function(app) {
       res.send({
         code    : 200,
         message : 'Logout successful.'
-      })
-    })
+      });
+    });
   }
 
   app.post('/v1/user', createAccount);
@@ -234,4 +234,4 @@ module.exports = function(app) {
   app.post('/v1/user/authenticate', authenticate);
   app.post('/v1/user/reauthenticate', reauthenticate);
   app.post('/v1/user/logout', logout);
-}
+};

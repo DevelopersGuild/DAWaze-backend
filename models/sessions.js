@@ -92,7 +92,7 @@ var SessionModel = {
   findSession : findSessionByUserId,
   findUser    : findUserByToken,
   create      : createSession,
-  destroy     : destroySession,
+  destroy     : destroySession
 };
 
 module.exports = SessionModel;
