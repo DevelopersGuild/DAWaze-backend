@@ -18,6 +18,9 @@ var SessionSchema = mongoose.Schema({
   // Defaults to the current time and expires in 7 days
   createdAt : { type : Date, default : Date.now, expires : '7d' },
 
+  // Defaults to the current time + 7 days
+  expireAt  : { type : Date, default : Date(Date.now + 604800000) },
+
   // Holds the ObjectId of the user logged into this session
   userId    : { type : mongoose.Schema.Types.ObjectId, required : true}
 });
@@ -27,7 +30,7 @@ var SessionMongoModel = Db.model('sessions', SessionSchema);
 
 // Takes a userId as an argument and returns the token string to the callback
 function findSessionByUserId(userId, callback) {
-  SessionMongoModel.findOne({ userId : userId.toLowerCase() },
+  SessionMongoModel.findOne({ userId : userId },
                             function(err, session) {
     if (err) {
       // TODO: Error message?

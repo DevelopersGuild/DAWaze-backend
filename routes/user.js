@@ -108,7 +108,7 @@ module.exports = function(app) {
         code    : 200,
         message : 'Account successfully created.',
         token   : session.token,
-        ttl     : session.createdAt + (60*60*24*7)
+        ttl     : session.expireAt - Date.now()
       });
     });
   }
@@ -193,7 +193,7 @@ module.exports = function(app) {
         code    : 200,
         message : 'Login successful.',
         token   : session.token,
-        ttl     : session.createdAt + (60*60*24*7)
+        ttl     : session.expireAt - Date.now()
       });
     });
   }
@@ -209,7 +209,7 @@ module.exports = function(app) {
         code    : 200,
         message : 'Login successful.',
         token   : session.token,
-        ttl     : session.createdAt + (60*60*24*7)
+        ttl     : session.expireAt
       });
     });
   }
