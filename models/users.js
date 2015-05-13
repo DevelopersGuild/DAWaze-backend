@@ -65,11 +65,6 @@ async.waterfall([
 
           // TODO: Error message?
           next(err);
-        } else if (!user) {
-          next({
-            code    : 400,
-            message : 'User creation failed.'
-          });
         }
         next(null, user);
       });
