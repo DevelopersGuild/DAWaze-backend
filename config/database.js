@@ -4,7 +4,7 @@ var mongoose = require('mongoose');
 
 // Tell Mongoose where our db is located. In this case, we are getting
 // the environment variable SERVER_IP which should be saved in the bash
-// in the folder DG-Forum
+// in the folder daze-backend
 var mongoAddress  = process.env.MONGO_ADDRESS  || '127.0.0.1';
 var mongoPort     = process.env.MONGO_PORT     || '27017';
 var mongoDatabase = process.env.MONGO_DATABASE || 'daze-backend';

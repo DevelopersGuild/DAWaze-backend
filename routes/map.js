@@ -4,14 +4,27 @@ module.exports = function(app) {
   var validator = require('validator');
   var Marker    = require('../models/markers');
 
+  function fetchMap(req, res) {
+    Marker.getAll(function(err, markers) {
+      if (err) {
+        res.send(err);
+      } else {
+        res.send({
+          code: 200,
+          message: 'Here are all the markers.',
+          markers: markers
+        });
+      }
+    });
+  }
+
   function newMarker(req, res) {
-    var token  = validator.toString(validator.escape(req.body.token));
-    var title  = validator.toString(validator.escape(req.body.title));
-    var lat    = validator.toString(validator.escape(req.body.lat));
-    var lon    = validator.toString(validator.escape(req.body.lon));
-    var marker = req.body.marker;
-    var user   = req.body.user;
-    var ttl    = req.body.ttl;
+    var token     = req.body.token;
+    var title     = req.body.title;
+    var location  = req.body.location;
+    var lat       = parseInt(req.body.lat,10);
+    var lon       = parseInt(req.body.lon, 10);
+    var ttl       = parseInt(req.body.ttl, 10);
 
     //////////////////
     // TITLE CHECKS //
@@ -69,18 +82,20 @@ module.exports = function(app) {
 
     // Check if valid ttl
 
-    Marker.create(token, title, lat, lon, marker, user, ttl,
-                  function (err, marker) {
-      if (err) {
-        res.send(err);
-        return;
+    Marker.create(token, title, location, lat, lon, ttl,
+      function (err, marker) {
+        if (err) {
+          res.send(err);
+          return;
+        }
+
+        res.send({
+          code    : 200,
+          message : 'Marker successfully created',
+          marker  : marker
+        });
       }
-      res.send({
-        code    : 200,
-        message : 'Marker successfully created',
-        marker  : marker
-      });
-    });
+    );
   }
 
   function deleteMarker(req, res) {
@@ -101,8 +116,8 @@ module.exports = function(app) {
   }
 
   // What is the structure of this method?
-  // app.get('/v1/map', getMarker);
-
+  //
+  app.get('/v1/map', fetchMap);
   app.post('/v1/map/marker', newMarker);
   app.delete('/v1/map/marker', deleteMarker);
 };

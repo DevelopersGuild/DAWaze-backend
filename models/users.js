@@ -4,6 +4,7 @@ var Db        = require('../config/database');
 var Session   = require('./sessions');
 var validator = require('validator');
 var mongoose  = require('mongoose');
+var bcrypt    = require('bcrypt');
 var async     = require('async');
 
 // Create the schema for a user
@@ -14,12 +15,29 @@ var UserSchema = mongoose.Schema({
   password      : { type: String, required: true }
 });
 
+/* "When you are hashing your data the module will go through a series of
+ *  rounds to give you a secure hash. The value you submit there is not just
+ *  the number of rounds that the module will go through to hash your data.
+ *  The module will use the value you enter and go through 2^rounds iterations
+ *  of processing.
+ *
+ * "On a 2GHz core you can roughly expect:
+ *
+ * "rounds=10: ~10 hashes/sec
+ *  rounds=13: ~1 sec/hash
+ *  rounds=25: ~1 hour/hash
+ *  rounds=31: 2-3 days/hash"
+ *
+ * @see https://www.npmjs.com/package/bcrypt
+ */
+var BCRYPT_SALT_ROUNDS = 10;
+
 // Creates a collection named users in MongoDB
 var UserMongoModel = Db.model('users', UserSchema);
 
 // Takes username, password, email and saves a new user to MongoDB
 function createUser(username, password, email, callback) {
-  async.waterfall([
+  async.parallel([
 
     // TODO: Try to put these in a parallel
     function(next) {
@@ -32,11 +50,11 @@ function createUser(username, password, email, callback) {
             code    : 400,
             message : 'Username already exists'
           });
+        } else {
+          next(null);
         }
-        next(null);
       });
-    },
-    function(next) {
+    }, function(next) {
 
       // Check if newUser.email is already in UserMongoModel
       UserMongoModel.findOne({ email : email.toLowerCase() },
@@ -46,77 +64,80 @@ function createUser(username, password, email, callback) {
             code    : 400,
             message : 'Email already exists'
           });
+        } else {
+          next(null);
         }
-        next(null);
-      });
-    },
-    function(next) {
-      var newUser = new UserMongoModel({
-        username      : username,
-        usernameLower : username.toLowerCase(),
-        email         : email.toLowerCase(),
-        password      : password
-      });
-
-      newUser.save(function(err, user) {
-        if (err) {
-
-          // TODO: Error message?
-          next(err);
-        }
-        next(null, user);
-      });
-    },
-    function(user, next) {
-      Session.create(user._id, function(err, session) {
-        if (err) {
-
-          // Error message handled by session model
-          next(err);
-        }
-        next(null, session);
       });
     }
-  ], callback);
+  ], function(err) {
+    if (err) {
+      callback(err);
+    } else {
+
+      async.waterfall([
+        function(next) {
+
+          bcrypt.hash(password, BCRYPT_SALT_ROUNDS, function(err, hash) {
+            if (err) {
+              next(err);
+            } else {
+              next(null, hash);
+            }
+          });
+
+        }, function(hash, next) {
+          UserMongoModel.create({
+            username      : username,
+            usernameLower : username.toLowerCase(),
+            email         : email.toLowerCase(),
+            password      : hash
+          }, function(err, user) {
+            if (err) {
+
+              // TODO: Error message?
+              next(err);
+            } else {
+              next(null, user._id);
+            }
+          });
+
+        }
+      ], function(err, userId) {
+        if (err) {
+          callback(err);
+        } else {
+          Session.create(userId, callback);
+        }
+      });
+    }
+  });
 }
 
 // Takes a token string and deletes the associated user and session from MongoDB
 function deleteUser(clientToken, callback) {
   async.waterfall([
     function(next) {
-      Session.findUser(clientToken, function(err, userId) {
-        if (err) {
-
-          // Error message handled by session model
-          next(err);
-        }
-        next(null, userId);
-      });
+      Session.findUser(clientToken, next);
     },
 
-    // TODO: Should user removal and session destruction happen in parralel?
     function(userId, next) {
 
       // Remove user from UserMongoModel
       UserMongoModel.findByIdAndRemove(userId,
-                                       function(err, user) {
-        if (err) {
-          // TODO: Error message?
-          next(err);
+        function(err) {
+          if (err) {
+            // TODO: Error message?
+            next(err);
+          } else {
+            next(null, userId);
+          }
         }
-        next(null);
-      });
+      );
     },
-    function(next) {
+    function(userId, next) {
 
       // Removes session from sessions collection
-      Session.destroy(clientToken, function(err) {
-        if (err) {
-          // Error message handled by session model
-          next(err);
-        }
-        next(null);
-      });
+      Session.destroyAll(clientToken, next);
     }
   ], callback);
 }
@@ -126,16 +147,8 @@ function deleteUser(clientToken, callback) {
 function changeUserPassword(clientToken, oldPassword, newPassword, callback) {
   async.waterfall([
     function(next) {
-      Session.findUser(clientToken, function(err, userId) {
-        if (err) {
-
-          // Error message handled by session model
-          next(err);
-        }
-        next(null, userId);
-      });
-    },
-    function(userId, next) {
+      Session.findUser(clientToken, next);
+    }, function(userId, next) {
       UserMongoModel.findById(userId, function(err, user) {
         if (err) {
 
@@ -146,25 +159,33 @@ function changeUserPassword(clientToken, oldPassword, newPassword, callback) {
             code    : 400,
             message : 'User does not exist.'
           });
-        } else if (user.password != oldPassword) {
+        } else {
+          next(null, user);
+        }
+      });
+    }, function(user, next) {
+      bcrypt.compare(oldPassword, user.password, function(err, isCorrect) {
+        if (err) {
+          next(err);
+        } else if (!isCorrect) {
           next({
             code    : 400,
-            message : 'Incorrect Password'
+            message : 'You entered the wrong password!'
           });
+        } else {
+          next(null, user);
         }
-        next(null, userId);
       });
-    },
-    function(userId, next) {
-      UserMongoModel.findByIdAndUpdate(userId, { password : newPassword },
-                                       function(err, user) {
+    }, function(user, next) {
+      bcrypt.hash(newPassword, BCRYPT_SALT_ROUNDS, function(err, hash) {
         if (err) {
-
-          // TODO: Error message?
           next(err);
+        } else {
+          next(null, hash, user);
         }
-        next(null);
       });
+    }, function(hash, user, next) {
+      UserMongoModel.findByIdAndUpdate(user._id, { password : hash }, next );
     }
   ], callback);
 }
@@ -174,37 +195,42 @@ function changeUserPassword(clientToken, oldPassword, newPassword, callback) {
 function userAuthentication(usernameEmail, password, callback) {
   async.waterfall([
     function(next) {
-      UserMongoModel.findOne({$or : [
-                         { usernameLower : usernameEmail.toLowerCase() },
-                         { email : usernameEmail.toLowerCase() }]},
-                         function(err, user) {
-        if (err) {
+      UserMongoModel.findOne(
+        {$or : [
+          { usernameLower : usernameEmail.toLowerCase() },
+          { email : usernameEmail.toLowerCase() }
+        ]}, function(err, user) {
+          if (err) {
 
-          // TODO: Error message?
+            // TODO: Error message?
+            next(err);
+          } else if (!user) {
+            next({
+              code    : 400,
+              message : 'Username/Email does not exists.'
+            });
+          } else {
+            next(null, user);
+          }
+        }
+      );
+    }, function(user, next) {
+      bcrypt.compare(password, user.password, function(err, isCorrect) {
+        if (err) {
           next(err);
-        } else if (!user) {
+        } else if (!isCorrect) {
           next({
             code    : 400,
-            message : 'Username/Email does not exists.'
+            message : 'You entered the wrong password!'
           });
-        } else if (user.password != password) {
-          next({
-            code    : 400,
-            message : 'Incorrect password.'
-          });
+        } else {
+          next(null, user);
         }
-        next(null, user);
       });
-    },
-    function(user, next) {
-      Session.create(user._id, function(err, session) {
-        if (err) {
 
-          // Error message handled by session model
-          next(err);
-        }
-        next(null, session);
-      });
+
+    }, function(user, next) {
+      Session.create(user._id, next);
     }
   ], callback);
 }
@@ -214,49 +240,18 @@ function userAuthentication(usernameEmail, password, callback) {
 function userReauthentication(clientToken, callback) {
   async.waterfall([
     function(next) {
-      Session.findUser(clientToken, function(err, userId) {
-        if (err) {
-
-          // Error message handled by session model
-          next(err);
-        }
-        next(null, userId);
-      });
-    },
-    function(userId, next) {
-      Session.destroy(clientToken, function(err, session) {
-        if (err) {
-
-          // Error message handled by session model
-          next(err);
-        }
-        next(null, userId);
-      });
-    },
-    function(userId, next) {
-      Session.create(userId, function(err, token) {
-        if (err) {
-
-          // Error message handled by session model
-          next(err);
-        }
-        next(null, token);
-      });
+      Session.findUser(clientToken, next);
+    }, function(userId, next) {
+      Session.create(userId, next);
+    }, function(token, next) {
+      Session.destroy(clientToken, next);
     }
   ], callback);
 }
 
 // Takes a token string and removes session from MongoDB
-function disconnectUser(clientToken, callback) {
-  Session.destroy(clientToken, function(err) {
-    if (err) {
-
-      // Error message handled by session model
-      callback(err);
-      return;
-    }
-    callback(null);
-  });
+function userLogout(clientToken, callback) {
+  Session.destroy(clientToken, callback);
 }
 
 var UserModel = {
@@ -265,7 +260,7 @@ var UserModel = {
   changePassword : changeUserPassword,
   login          : userAuthentication,
   reauthenticate : userReauthentication,
-  logout         : disconnectUser
+  logout         : userLogout
 };
 
 module.exports = UserModel;

@@ -12,9 +12,9 @@ module.exports = function(app) {
   }
 
   function createAccount(req, res) {
-    var username = validator.toString(validator.escape(req.body.username));
-    var password = validator.toString(validator.escape(req.body.password));
-    var email    = validator.toString(validator.escape(req.body.email));
+    var username = req.body.username;
+    var password = req.body.password;
+    var email    = req.body.email;
 
     // Captcha key
 
@@ -130,8 +130,8 @@ module.exports = function(app) {
 
   function changePassword(req, res) {
     var clientToken = req.body.token;
-    var oldPassword = validator.toString(validator.escape(req.body.oldPassword));
-    var newPassword = validator.toString(validator.escape(req.body.newPassword));
+    var oldPassword = req.body.oldPassword;
+    var newPassword = req.body.newPassword;
 
     User.changePassword(clientToken, oldPassword, newPassword, function(err) {
       if (err) {
@@ -146,14 +146,15 @@ module.exports = function(app) {
   }
 
   function authenticate(req, res) {
-    var usernameEmail = validator.toString(validator.escape(req.body.usernameEmail));
-    var password      = validator.toString(validator.escape(req.body.password));
+    var usernameEmail = req.body.usernameEmail;
+    var password      = req.body.password;
 
     if (!usernameEmail) {
       res.send({
         code    : 400,
         message : 'Username/Email field is required.'
       });
+      return;
     }
 
     // TODO: Decide on min and max
@@ -207,9 +208,9 @@ module.exports = function(app) {
       }
       res.send({
         code    : 200,
-        message : 'Login successful.',
+        message : 'Session successfully refreshed.',
         token   : session.token,
-        ttl     : session.expireAt
+        ttl     : session.expireAt - Date.now()
       });
     });
   }
