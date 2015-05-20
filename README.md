@@ -40,14 +40,14 @@
 
 **Coding Style**
 
-We'll be using [Airbnb's Javascript Style Guide](https://github.com/airbnb/javascript)
+We'll be using [Airbnb's ES5 Javascript Style Guide](https://github.com/airbnb/javascript/tree/master/es5)
 
 **Good Links to Check Out**
 
 - [Express' Website](http://expressjs.com/)
 - [npm's Website](https://www.npmjs.com/)
 - [Dead Simple Guide to Node.js, Express, and MongoDB](http://cwbuecheler.com/web/tutorials/2013/node-express-mongo/)
-- [Javascript Style Guide](https://github.com/airbnb/javascript)
+- [ES5 Javascript Style Guide](https://github.com/airbnb/javascript/tree/master/es5)
 
 **License**
 
