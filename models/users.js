@@ -137,7 +137,7 @@ function deleteUser(clientToken, callback) {
     function(userId, next) {
 
       // Removes session from sessions collection
-      Session.destroyAll(clientToken, next);
+      Session.destroyAll(userId, next);
     }
   ], callback);
 }
@@ -227,8 +227,6 @@ function userAuthentication(usernameEmail, password, callback) {
           next(null, user);
         }
       });
-
-
     }, function(user, next) {
       Session.create(user._id, next);
     }
