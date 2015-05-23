@@ -2,12 +2,14 @@
 
 var validator = require('validator');
 
-var USERNAME_MIN_LEN  = 3;
-var USERNAME_MAX_LEN  = 20;
-var EMAIL_MAX_LEN     = 254;
-var PASSWORD_MIN_LEN  = 5;
-var PASSWORD_MAX_LEN  = 512;
-
+var USERNAME_MIN_LEN    = 3;
+var USERNAME_MAX_LEN    = 20;
+var EMAIL_MAX_LEN       = 254;
+var PASSWORD_MIN_LEN    = 5;
+var PASSWORD_MAX_LEN    = 512;
+var TITLE_MAX_LEN       = 140;
+var DESCRIPTION_MAX_LEN = 140;
+var LOCATION_MAX_LEN    = 50;
 
 function validateToken(token) {
   var tokenRegexp = /^[A-Za-z0-9+\/]{342}==$/;
@@ -91,10 +93,74 @@ function validateUsernameEmail(usernameEmail) {
   }
 
   // Whichever is greater.
-  var maxLen = Math.max(EMAIL_MAX_LEN, USERNAME_MAX_LEN) + 1;
+  var maxLen = Math.max(EMAIL_MAX_LEN, USERNAME_MAX_LEN);
   if (validator.isLength(usernameEmail, maxLen + 1)) {
 
     return new Error('Username/Email is too long.');
+  }
+
+  return null;
+}
+
+function validateTitle(title) {
+
+  if (!title) {
+    return new Error('Title field cannot be empty.');
+  }
+
+  if (validator.isLength(title, TITLE_MAX_LEN + 1)) {
+
+    return new Error('Title is too long.');
+  }
+
+  return null;
+}
+
+function validateDescription(description) {
+
+  if (validator.isLength(description, DESCRIPTION_MAX_LEN + 1)) {
+
+    return new Error('Description is too long.');
+  }
+
+  return null;
+}
+
+function validateLocation(location) {
+
+  if (!location) {
+    return new Error('Location field cannot be empty.');
+  }
+
+  if (validator.isLength(location, LOCATION_MAX_LEN + 1)) {
+
+    return new Error('Location is too long.');
+  }
+
+  return null;
+}
+
+function validateCoordinate(coordinate) {
+
+  if (!coordinate) {
+    return new Error('Invalid Marker Coordinates.');
+  }
+
+  if (typeof coordinate !== Number) {
+    return new Error ('Invalid Marker Coordinates.');
+  }
+
+  return null;
+}
+
+function validateTtl(ttl) {
+
+  if (!ttl) {
+    return new Error('Invalid date/time specified.');
+  }
+
+  if (typeof coordinate !== Number) {
+    return new Error ('Invalid date/time specified.');
   }
 
   return null;
