@@ -146,7 +146,7 @@ function validateCoordinate(coordinate) {
     return new Error('Invalid Marker Coordinates.');
   }
 
-  if (typeof coordinate !== Number) {
+  if (typeof coordinate !== 'number') {
     return new Error ('Invalid Marker Coordinates.');
   }
 
@@ -159,20 +159,37 @@ function validateTtl(ttl) {
     return new Error('Invalid date/time specified.');
   }
 
-  if (typeof coordinate !== Number) {
+  if (typeof ttl !== 'number') {
     return new Error ('Invalid date/time specified.');
   }
 
   return null;
 }
 
+function sendError(res, err) {
+  if (err) {
+    res.send({
+      code: 400,
+      message: err.message
+    });
+    return true;
+  } else {
+    return false;
+  }
+}
 
 var ShallowValidateModel = {
   username      : validateUsername,
   email         : validateEmail,
   password      : validatePassword,
   usernameEmail : validateUsernameEmail,
-  token         : validateToken
+  token         : validateToken,
+  title         : validateTitle,
+  description   : validateDescription,
+  location      : validateLocation,
+  coordinate    : validateCoordinate,
+  ttl           : validateTtl,
+  sendError     : sendError
 };
 
 module.exports = ShallowValidateModel;
