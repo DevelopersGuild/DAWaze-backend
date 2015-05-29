@@ -1,7 +1,7 @@
 'use strict';
 
 module.exports = function(app) {
-  var validator = require('validator');
+  var Validator = require('../models/shallow-validator');
   var Marker    = require('../models/markers');
 
   function fetchMap(req, res) {
@@ -26,61 +26,12 @@ module.exports = function(app) {
     var lon       = parseInt(req.body.lon, 10);
     var ttl       = parseInt(req.body.ttl, 10);
 
-    //////////////////
-    // TITLE CHECKS //
-    //////////////////
-
-    // Checks empty title field
-    if (!title) {
-      res.send({
-        code    : 400,
-        message : 'Title field is required.'
-      });
-      return;
-    }
-
-    // TODO: Decide on title length
-    // Checks title length
-    if (!validator.isLength(title, 5, 512)) {
-      res.send({
-        code    : 400,
-        message : 'Title must be between 5 and 512 characters.'
-      });
-    }
-
-    // Check for vulgarness??? (Profanity Util)
-
-    ///////////////////////
-    // COORDINATE CHECKS //
-    ///////////////////////
-
-    // Checks empty latitude field
-    if (!lat) {
-      res.send({
-        code    : 400,
-        message : 'Latitude field is required.'
-      });
-      return;
-    }
-
-    // Valid latitude checks
-
-    // Checks empty longitude field
-    if (!lon) {
-      res.send({
-        code    : 400,
-        message : 'Longitude field is required.'
-      });
-      return;
-    }
-
-    // Valid logitude checks
-
-    ///////////////////////////////////////
-
-    // Check user/ownwer id?
-
-    // Check if valid ttl
+    if (Validator.sendError(res, Validator.token(token))) { return; }
+    if (Validator.sendError(res, Validator.title(title))) { return; }
+    if (Validator.sendError(res, Validator.location(location))) { return; }
+    if (Validator.sendError(res, Validator.coordinate(lat))) { return; }
+    if (Validator.sendError(res, Validator.coordinate(lon))) { return; }
+    if (Validator.sendError(res, Validator.ttl(ttl))) { return; }
 
     Marker.create(token, title, location, lat, lon, ttl,
       function (err, marker) {
@@ -101,6 +52,8 @@ module.exports = function(app) {
   function deleteMarker(req, res) {
     var token = req.body.token;
 
+    if (Validator.sendError(res, Validator.token(token))) { return; }
+
     // Any checks??
 
     Marker.delete(function(err) {
@@ -119,5 +72,7 @@ module.exports = function(app) {
   //
   app.get('/v1/map', fetchMap);
   app.post('/v1/map/marker', newMarker);
-  app.delete('/v1/map/marker', deleteMarker);
+
+  // Not in the API specs
+  // app.delete('/v1/map/marker', deleteMarker);
 };
