@@ -24,7 +24,10 @@ module.exports = function(app) {
     var location  = req.body.location;
     var lat       = parseInt(req.body.lat, 10);
     var lon       = parseInt(req.body.lon, 10);
+    var type      = parseInt(req.body.type, 10);
     var ttl       = parseInt(req.body.ttl, 10);
+
+    // TODO: validate type
 
     if (Validator.sendError(res, Validator.token(token))) { return; }
     if (Validator.sendError(res, Validator.title(title))) { return; }
@@ -33,7 +36,7 @@ module.exports = function(app) {
     if (Validator.sendError(res, Validator.coordinate(lon))) { return; }
     if (Validator.sendError(res, Validator.ttl(ttl))) { return; }
 
-    Marker.create(token, title, location, lat, lon, ttl,
+    Marker.create(token, title, location, lat, lon, type, ttl,
       function (err, marker) {
         if (err) {
           res.send(err);
