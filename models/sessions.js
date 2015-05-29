@@ -95,7 +95,6 @@ function destroySession(clientToken, callback) {
         callback(null);
       }
     }
-
   );
 }
 

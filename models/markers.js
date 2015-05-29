@@ -9,13 +9,16 @@ var TTL = 604800000;
 
 var ObjectId  = mongoose.Schema.ObjectId;
 
-// Create the schema for a tag
+// Create the schema for a marker
 var MarkerSchema = mongoose.Schema({
 
-  // Title of the tag
+  // Title of the marker
   title       : {type: String, required: true},
 
-  // Location of the tag in terms of DeAnza building and room #
+  // Description for the marker
+  description : {type: String, required: true},
+
+  // Location of the marker in terms of DeAnza building and room #
   location    : {type: String, required: true},
 
   // Coordinates of the location
@@ -24,20 +27,20 @@ var MarkerSchema = mongoose.Schema({
     lon       : {type: Number, required: true}
   },
 
-  // Username of owner of the tag
+  // Username of owner of the marker
   owner       : {type: ObjectId, required: true},
 
   // Creation date defaults to Date.now()
   createdAt   : {type: Date, default: Date.now},
 
   // Expiration set to Date.now() + TTL
-  expireAt    : {type: Date, required: true}
+  expireAt    : {type: Date, required: true, expireAfterSeconds: 0}
 });
 
-// Creates a collection named tags in MongoDB
+// Creates a collection named marker in MongoDB
 var MarkerMongoModel = Db.model('markers', MarkerSchema);
 
-// Creates a new tag with required indexes.
+// Creates a new marker with required indexes.
 function createMarker(token, title, location, lat, lon, ttl, callback) {
   async.waterfall([function(next) {
     Session.findUser(token, next);

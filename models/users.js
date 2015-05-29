@@ -38,8 +38,6 @@ var UserMongoModel = Db.model('users', UserSchema);
 // Takes username, password, email and saves a new user to MongoDB
 function createUser(username, password, email, callback) {
   async.parallel([
-
-    // TODO: Try to put these in a parallel
     function(next) {
 
       // Check if newUser.username is already in UserMongoModel

@@ -22,7 +22,7 @@ module.exports = function(app) {
     var token     = req.body.token;
     var title     = req.body.title;
     var location  = req.body.location;
-    var lat       = parseInt(req.body.lat,10);
+    var lat       = parseInt(req.body.lat, 10);
     var lon       = parseInt(req.body.lon, 10);
     var ttl       = parseInt(req.body.ttl, 10);
 
