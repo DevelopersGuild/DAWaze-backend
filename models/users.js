@@ -2,7 +2,7 @@
 
 var Db        = require('../config/database');
 var Session   = require('./sessions');
-var validator = require('validator');
+var Marker    = require('./markers');
 var mongoose  = require('mongoose');
 var bcrypt    = require('bcrypt');
 var async     = require('async');
@@ -111,19 +111,27 @@ function createUser(username, password, email, callback) {
   });
 }
 
-// Takes a token string and deletes the associated user and session from MongoDB
+// Takes a token string and deletes the associated user, markers and session from MongoDB
 function deleteUser(clientToken, callback) {
   async.waterfall([
     function(next) {
       Session.findUser(clientToken, next);
     },
-
     function(userId, next) {
-
+      Marker.removeAll(userId, function(err) {
+        if (err) {
+          next(err);
+        } else {
+          next(null, userId);
+        }
+      });
+    },
+    function(userId, next) {
       // Remove user from UserMongoModel
       UserMongoModel.findByIdAndRemove(userId,
         function(err) {
           if (err) {
+
             // TODO: Error message?
             next(err);
           } else {

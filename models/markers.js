@@ -27,6 +27,9 @@ var MarkerSchema = mongoose.Schema({
     lon       : {type: Number, required: true}
   },
 
+  // Type of the marker
+  type        : {type: Number, required true},
+
   // Username of owner of the marker
   owner       : {type: ObjectId, required: true},
 
@@ -41,7 +44,7 @@ var MarkerSchema = mongoose.Schema({
 var MarkerMongoModel = Db.model('markers', MarkerSchema);
 
 // Creates a new marker with required indexes.
-function createMarker(token, title, location, lat, lon, ttl, callback) {
+function createMarker(token, title, location, type, lat, lon, ttl, callback) {
   async.waterfall([function(next) {
     Session.findUser(token, next);
   }, function(userId, next) {
@@ -53,6 +56,7 @@ function createMarker(token, title, location, lat, lon, ttl, callback) {
         lat       : lat,
         lon       : lon
       },
+      type        : type,
       owner       : userId,
       expireAt    : Date.now() + ttl
     }, next);
@@ -61,15 +65,14 @@ function createMarker(token, title, location, lat, lon, ttl, callback) {
       callback(err);
     } else {
       var callbackMarker = {
-        id: marker._id,
-        title: marker.title,
-        location: marker.location,
-        ttl: marker.expireAt - Date.now(),
-        lat: marker.coordinates.lat,
-        lon: marker.coordinates.lon
-
+        id       : marker._id,
+        title    : marker.title,
+        location : marker.location,
+        type     : marker.type,
+        ttl      : marker.expireAt - Date.now(),
+        lat      : marker.coordinates.lat,
+        lon      : marker.coordinates.lon
       };
-
       callback(err, callbackMarker);
     }
   });
@@ -83,12 +86,13 @@ function getAllMarkers(callback) {
     } else {
       var callbackMarkers = markers.map(function(marker) {
         return {
-          id: marker._id,
-          title: marker.title,
-          location: marker.location,
-          ttl: marker.expireAt - Date.now(),
-          lat: marker.coordinates.lat,
-          lon: marker.coordinates.lon
+          id       : marker._id,
+          title    : marker.title,
+          location : marker.location,
+          type     : marker.type,
+          ttl      : marker.expireAt - Date.now(),
+          lat      : marker.coordinates.lat,
+          lon      : marker.coordinates.lon
         };
       });
       callback(null, callbackMarkers);
@@ -96,9 +100,20 @@ function getAllMarkers(callback) {
   });
 }
 
+function removeAllMarkers(userId, callback) {
+  MarkerMongoModel.remove({ owner : userId }, function(err) {
+    if (err) {
+      callback(err);
+    } else {
+      callback(null);
+    }
+  });
+}
+
 var MarkerModel = {
   create: createMarker,
-  getAll: getAllMarkers
+  getAll: getAllMarkers,
+  removeAll: removeAllMarkers
 };
 
 module.exports = MarkerModel;
