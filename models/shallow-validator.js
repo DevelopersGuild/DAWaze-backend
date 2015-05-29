@@ -153,6 +153,19 @@ function validateCoordinate(coordinate) {
   return null;
 }
 
+function validateType(type) {
+
+  if (!type) {
+    return new Error('Type field cannot be empty.');
+  }
+
+  if (typeof type !== 'number') {
+    return new Error ('Invalid type.');
+  }
+
+  return null;
+}
+
 function validateTtl(ttl) {
 
   if (!ttl) {

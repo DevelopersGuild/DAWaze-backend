@@ -27,13 +27,12 @@ module.exports = function(app) {
     var type      = parseInt(req.body.type, 10);
     var ttl       = parseInt(req.body.ttl, 10);
 
-    // TODO: validate type
-
     if (Validator.sendError(res, Validator.token(token))) { return; }
     if (Validator.sendError(res, Validator.title(title))) { return; }
     if (Validator.sendError(res, Validator.location(location))) { return; }
     if (Validator.sendError(res, Validator.coordinate(lat))) { return; }
     if (Validator.sendError(res, Validator.coordinate(lon))) { return; }
+    if (Validator.sendError(res, Validator.type(type))) { return; }
     if (Validator.sendError(res, Validator.ttl(ttl))) { return; }
 
     Marker.create(token, title, location, lat, lon, type, ttl,
