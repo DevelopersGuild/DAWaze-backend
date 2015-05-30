@@ -201,6 +201,7 @@ var ShallowValidateModel = {
   description   : validateDescription,
   location      : validateLocation,
   coordinate    : validateCoordinate,
+  type          : validateType,
   ttl           : validateTtl,
   sendError     : sendError
 };

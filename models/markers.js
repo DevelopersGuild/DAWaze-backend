@@ -11,67 +11,52 @@ var ObjectId  = mongoose.Schema.ObjectId;
 
 // Create the schema for a marker
 var MarkerSchema = mongoose.Schema({
-
-  // Title of the marker
   title       : {type: String, required: true},
-
-  // Description for the marker
   description : {type: String, required: true},
-
-  // Location of the marker in terms of DeAnza building and room #
   location    : {type: String, required: true},
-
-  // Coordinates of the location
   coordinates : {
     lat       : {type: Number, required: true},
     lon       : {type: Number, required: true}
   },
-
-  // Type of the marker
-  type        : {type: Number, required true},
-
-  // Username of owner of the marker
+  type        : {type: Number, required: true},
   owner       : {type: ObjectId, required: true},
-
-  // Creation date defaults to Date.now()
-  createdAt   : {type: Date, default: Date.now},
-
-  // Expiration set to Date.now() + TTL
-  expireAt    : {type: Date, required: true, expireAfterSeconds: 0}
+  createdAt   : {type: Date, expires: 2}
 });
 
 // Creates a collection named marker in MongoDB
 var MarkerMongoModel = Db.model('markers', MarkerSchema);
 
 // Creates a new marker with required indexes.
-function createMarker(token, title, location, type, lat, lon, ttl, callback) {
+function createMarker(token, title, description, location,
+                      type, lat, lon, ttl, callback) {
   async.waterfall([function(next) {
     Session.findUser(token, next);
   }, function(userId, next) {
     //console.log(date.getTime());
     MarkerMongoModel.create({
       title       : title,
+      description : description,
       location    : location,
       coordinates : {
         lat       : lat,
         lon       : lon
       },
       type        : type,
-      owner       : userId,
-      expireAt    : Date.now() + ttl
+      owner       : userId
     }, next);
   }], function(err, marker) {
     if (err) {
       callback(err);
     } else {
       var callbackMarker = {
-        id       : marker._id,
-        title    : marker.title,
-        location : marker.location,
-        type     : marker.type,
-        ttl      : marker.expireAt - Date.now(),
-        lat      : marker.coordinates.lat,
-        lon      : marker.coordinates.lon
+        id          : marker._id,
+        title       : marker.title,
+        description : marker.description,
+        location    : marker.location,
+        type        : marker.type,
+       // ttl         : marker.createdAt,
+        lat         : marker.coordinates.lat,
+        lon         : marker.coordinates.lon
       };
       callback(err, callbackMarker);
     }
@@ -86,13 +71,14 @@ function getAllMarkers(callback) {
     } else {
       var callbackMarkers = markers.map(function(marker) {
         return {
-          id       : marker._id,
-          title    : marker.title,
-          location : marker.location,
-          type     : marker.type,
-          ttl      : marker.expireAt - Date.now(),
-          lat      : marker.coordinates.lat,
-          lon      : marker.coordinates.lon
+          id          : marker._id,
+          title       : marker.title,
+          description : marker.description,
+          location    : marker.location,
+          type        : marker.type,
+          //ttl         : marker.createdAt.expires,
+          lat         : marker.coordinates.lat,
+          lon         : marker.coordinates.lon
         };
       });
       callback(null, callbackMarkers);
