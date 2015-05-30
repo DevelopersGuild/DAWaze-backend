@@ -19,23 +19,25 @@ module.exports = function(app) {
   }
 
   function newMarker(req, res) {
-    var token     = req.body.token;
-    var title     = req.body.title;
-    var location  = req.body.location;
-    var lat       = parseInt(req.body.lat, 10);
-    var lon       = parseInt(req.body.lon, 10);
-    var type      = parseInt(req.body.type, 10);
-    var ttl       = parseInt(req.body.ttl, 10);
+    var token       = req.body.token;
+    var title       = req.body.title;
+    var description = req.body.description;
+    var location    = req.body.location;
+    var lat         = parseInt(req.body.lat, 10);
+    var lon         = parseInt(req.body.lon, 10);
+    var type        = parseInt(req.body.type, 10);
+    var ttl         = parseInt(req.body.ttl, 10);
 
     if (Validator.sendError(res, Validator.token(token))) { return; }
     if (Validator.sendError(res, Validator.title(title))) { return; }
+    if (Validator.sendError(res, Validator.description(description))) { return; }
     if (Validator.sendError(res, Validator.location(location))) { return; }
     if (Validator.sendError(res, Validator.coordinate(lat))) { return; }
     if (Validator.sendError(res, Validator.coordinate(lon))) { return; }
     if (Validator.sendError(res, Validator.type(type))) { return; }
     if (Validator.sendError(res, Validator.ttl(ttl))) { return; }
 
-    Marker.create(token, title, location, lat, lon, type, ttl,
+    Marker.create(token, title, description, location, type, lat, lon, ttl,
       function (err, marker) {
         if (err) {
           res.send(err);
