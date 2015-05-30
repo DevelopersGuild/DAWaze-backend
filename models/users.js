@@ -247,8 +247,14 @@ function userReauthentication(clientToken, callback) {
       Session.findUser(clientToken, next);
     }, function(userId, next) {
       Session.create(userId, next);
-    }, function(token, next) {
-      Session.destroy(clientToken, next);
+    }, function(session, next) {
+      Session.destroy(clientToken, function(err) {
+        if (err) {
+          next(err);
+        } else {
+          next(null, session);
+        }
+      });
     }
   ], callback);
 }
