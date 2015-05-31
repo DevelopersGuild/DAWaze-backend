@@ -21,7 +21,7 @@ function createExpirationDate() {
 // Creates the schema for a session
 var SessionSchema = mongoose.Schema({
   token     : { type : String, default : generateToken },
-  createdAt : { type : Date, default : Date.now, expires : '7d' },
+  createdAt : { type : Date, default : Date.now, expires : TTL/1000 },
   expireAt  : { type : Date, default : createExpirationDate },
   userId    : { type : ObjectId, required : true}
 });
