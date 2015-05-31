@@ -3,9 +3,7 @@
 var Db       = require('../config/database');
 var async     = require('async');
 var mongoose = require('mongoose');
-
 var Session = require('./sessions');
-var TTL = 604800000;
 
 var ObjectId  = mongoose.Schema.ObjectId;
 
@@ -20,7 +18,8 @@ var MarkerSchema = mongoose.Schema({
   },
   type        : {type: Number, required: true},
   owner       : {type: ObjectId, required: true},
-  createdAt   : {type: Date, expires: 2}
+  createdAt   : {type: Date, default: Date.now},
+  expireAt    : {type: Date, required: true, expires: 0}
 });
 
 // Creates a collection named marker in MongoDB
@@ -42,7 +41,8 @@ function createMarker(token, title, description, location,
         lon       : lon
       },
       type        : type,
-      owner       : userId
+      owner       : userId,
+      expireAt    : Date.now() + ttl
     }, next);
   }], function(err, marker) {
     if (err) {
@@ -54,7 +54,7 @@ function createMarker(token, title, description, location,
         description : marker.description,
         location    : marker.location,
         type        : marker.type,
-       // ttl         : marker.createdAt,
+        ttl         : marker.expireAt - Date.now(),
         lat         : marker.coordinates.lat,
         lon         : marker.coordinates.lon
       };
@@ -76,7 +76,7 @@ function getAllMarkers(callback) {
           description : marker.description,
           location    : marker.location,
           type        : marker.type,
-          //ttl         : marker.createdAt.expires,
+          ttl         : marker.expireAt - Date.now(),
           lat         : marker.coordinates.lat,
           lon         : marker.coordinates.lon
         };
