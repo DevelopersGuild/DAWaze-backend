@@ -18,19 +18,11 @@ function createExpirationDate() {
   return (Date.now() + TTL);
 }
 
-// Create the schema for a session
+// Creates the schema for a session
 var SessionSchema = mongoose.Schema({
-
-  // Defaults to a string of 256 characters
   token     : { type : String, default : generateToken },
-
-  // Defaults to the current time and expires in 7 days
   createdAt : { type : Date, default : Date.now, expires : '7d' },
-
-  // Defaults to the current time + 7 days
   expireAt  : { type : Date, default : createExpirationDate },
-
-  // Holds the ObjectId of the user logged into this session
   userId    : { type : ObjectId, required : true}
 });
 
