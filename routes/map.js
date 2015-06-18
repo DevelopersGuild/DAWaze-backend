@@ -23,8 +23,8 @@ module.exports = function(app) {
     var title       = req.body.title;
     var description = req.body.description;
     var location    = req.body.location;
-    var lat         = parseInt(req.body.lat, 10);
-    var lon         = parseInt(req.body.lon, 10);
+    var lat         = parseFloat(req.body.lat, 10);
+    var lon         = parseFloat(req.body.lon, 10);
     var type        = parseInt(req.body.type, 10);
     var ttl         = parseInt(req.body.ttl, 10);
 
