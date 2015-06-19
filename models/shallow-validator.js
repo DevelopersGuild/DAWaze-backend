@@ -155,7 +155,7 @@ function validateCoordinate(coordinate) {
 
 function validateType(type) {
 
-  if (!type) {
+  if (!type && type !== 0) {
     return new Error('Type field cannot be empty.');
   }
 
