@@ -22,6 +22,7 @@ function createExpirationDate() {
 var SessionSchema = mongoose.Schema({
   token     : { type : String, default : generateToken },
   createdAt : { type : Date, default : Date.now},
+  expirationDate  : { type : Date, default : createExpirationDate },
   userId    : { type : ObjectId, required : true}
 });
 
